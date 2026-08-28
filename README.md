@@ -2,6 +2,8 @@
 
 근거가 확인된 자료만 사용해 세무 검토 초안을 만들고, 독립 검증과 전문가 승인을 거쳐 워크페이퍼로 확정하는 업무 플랫폼입니다. React와 Next.js 기반 화면부터 PostgreSQL, 파일 검역 워커, RAG 에이전트, MCP, 관측성, 컨테이너와 AWS 배포 참조까지 하나의 저장소에 구현했습니다.
 
+라이브 포트폴리오: [taxops-ai.vercel.app](https://taxops-ai.vercel.app). 예시 데이터와 결정론적 AI 흐름만 제공하며, 입력 내용은 영구 저장되지 않습니다.
+
 ![TaxOps AI 대시보드](artifacts/dashboard-visual.png)
 
 ## 구현 범위
