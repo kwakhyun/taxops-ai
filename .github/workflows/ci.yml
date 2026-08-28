@@ -1,0 +1,120 @@
+name: quality-gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run audit:prod
+      - run: npm run verify
+      - name: Upload deterministic evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report
+          path: artifacts/evaluation-report.json
+          if-no-files-found: error
+
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production web image
+        run: docker build --target web -t taxops-web:${{ github.sha }} .
+      - name: Build production worker image
+        run: docker build --target worker -t taxops-worker:${{ github.sha }} .
+      - name: Build production reviewer image
+        run: docker build --target reviewer -t taxops-reviewer:${{ github.sha }} .
+
+  browser-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+  terraform-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=infra/terraform fmt -check
+      - run: terraform -chdir=infra/terraform init -backend=false
+      - run: terraform -chdir=infra/terraform validate
+
+  database-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start PostgreSQL with pgvector
+        run: docker compose up -d --wait db
+      - name: Apply migration and seed
+        run: |
+          docker compose run --rm migrate
+          docker compose run --rm seed
+      - name: Start the production worker image
+        run: |
+          docker compose up -d worker
+          docker compose exec -T worker node --version
+      - name: Run production repository and transaction contracts
+        run: docker compose run --rm contract-test
+      - name: Run isolated reviewer service and OIDC boundary contract
+        run: docker compose run --rm contract-test npm run test:reviewer-service
+      - name: Run storage, malware and ingestion worker contract
+        run: docker compose run --rm contract-test node --import tsx scripts/run-worker-smoke.ts
+      - name: Verify tenant RLS with the application role
+        run: |
+          docker compose run --rm --entrypoint psql \
+            -e PGPASSWORD=taxops_app_dev_only seed \
+            -h db -U taxops_app -d taxops -v ON_ERROR_STOP=1 \
+            -c "BEGIN; SELECT set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true); DO \$\$ BEGIN IF (SELECT count(*) FROM matters) <> 1 THEN RAISE EXCEPTION 'expected one visible matter'; END IF; END \$\$; COMMIT;"
+          docker compose run --rm --entrypoint psql \
+            -e PGPASSWORD=taxops_app_dev_only seed \
+            -h db -U taxops_app -d taxops -v ON_ERROR_STOP=1 \
+            -c "BEGIN; SELECT set_config('app.tenant_id','00000000-0000-4000-8000-000000000999',true); DO \$\$ BEGIN IF (SELECT count(*) FROM matters) <> 0 THEN RAISE EXCEPTION 'RLS leakage'; END IF; END \$\$; COMMIT;"
+      - name: Verify worker RLS and chunk-write contract
+        run: |
+          docker compose run --rm --entrypoint psql \
+            -e PGPASSWORD=taxops_worker_dev_only seed \
+            -h db -U taxops_worker -d taxops -v ON_ERROR_STOP=1 \
+            -c "BEGIN; SELECT set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true); UPDATE documents SET status='PARSING' WHERE id='00000000-0000-4000-8000-000000000601' AND evidence_status='PENDING'; INSERT INTO document_chunks (id,tenant_id,matter_id,document_id,document_version,chunk_index,char_start,char_end,content,content_hash) VALUES ('00000000-0000-4000-8000-000000000701','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000601',1,0,0,8,'contract','cc8321d6375c494d043fdd0260f21bc0ec51dacc9f6abb7f909cdcd3041b78bf'); UPDATE document_chunks SET is_current=false WHERE id='00000000-0000-4000-8000-000000000701'; ROLLBACK;"
+      - name: Verify stale lease reclaim and immutable workpaper versions
+        run: |
+          docker compose run --rm --entrypoint psql \
+            -e PGPASSWORD=taxops_owner_dev_only seed \
+            -h db -U taxops_owner -d taxops -v ON_ERROR_STOP=1 \
+            -c "BEGIN; INSERT INTO jobs (id,tenant_id,type,status,idempotency_key,payload,attempts,lease_owner,lease_expires_at) VALUES ('00000000-0000-4000-8000-000000000801','00000000-0000-4000-8000-000000000001','DOCUMENT_INGESTION','RUNNING','stale-contract','{}',1,'dead-worker',now()-interval '1 minute'); DO \$\$ DECLARE claimed record; BEGIN SELECT * INTO claimed FROM claim_next_job('contract-worker'); IF claimed.id <> '00000000-0000-4000-8000-000000000801'::uuid OR claimed.attempts <> 2 THEN RAISE EXCEPTION 'stale job was not reclaimed'; END IF; END \$\$; ROLLBACK;"
+          docker compose run --rm --entrypoint psql \
+            -e PGPASSWORD=taxops_owner_dev_only seed \
+            -h db -U taxops_owner -d taxops -v ON_ERROR_STOP=1 \
+            -c "DO \$\$ BEGIN BEGIN UPDATE workpaper_versions SET content='{}'::jsonb WHERE id='00000000-0000-4000-8000-000000000402'; RAISE EXCEPTION 'immutable update unexpectedly succeeded'; EXCEPTION WHEN raise_exception THEN IF SQLERRM <> 'workpaper_versions are append-only' THEN RAISE; END IF; END; END \$\$;"
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs db worker minio clamav

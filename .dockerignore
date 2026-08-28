@@ -1,0 +1,14 @@
+.git
+.next
+.next-e2e
+node_modules
+**/.terraform
+*.tfstate*
+*.tsbuildinfo
+coverage
+playwright-report
+test-results
+artifacts
+.env*
+!.env.example
+npm-debug.log*

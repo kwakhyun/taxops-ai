@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2024"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": [
+    "src/reviewer/**/*.ts",
+    "src/lib/auth/token-policy.ts",
+    "src/lib/documents/evidence-manifest.ts",
+    "src/lib/review/service-crypto.ts",
+    "src/lib/security/approval-token.ts",
+    "src/lib/workpapers/artifact.ts"
+  ]
+}

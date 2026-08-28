@@ -1,0 +1,90 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787922463258,
+      "tag": "0000_graceful_skullbuster",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787932779625,
+      "tag": "0001_petite_zuras",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787936849641,
+      "tag": "0002_right_sumo",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787938260625,
+      "tag": "0003_graceful_fantastic_four",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787939891340,
+      "tag": "0004_watery_iron_fist",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787943571474,
+      "tag": "0005_silent_rafael_vega",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787944687739,
+      "tag": "0006_greedy_monster_badoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787947200000,
+      "tag": "0007_full_audit_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787948100000,
+      "tag": "0008_decision_and_audit_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787949000000,
+      "tag": "0009_reviewer_lineage_read",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787949900000,
+      "tag": "0010_workpaper_release_boundary",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787950800000,
+      "tag": "0011_page_number_contract",
+      "breakpoints": true
+    }
+  ]
+}

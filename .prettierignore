@@ -1,0 +1,7 @@
+.next
+.next-e2e
+node_modules
+coverage
+playwright-report
+package-lock.json
+artifacts/evaluation-report.json
