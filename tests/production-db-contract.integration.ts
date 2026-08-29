@@ -21,6 +21,7 @@ import {
   createMatter,
   createWorkpaperDraft,
   finishAgentRun,
+  getDocumentDownload,
   getDocumentEvidenceReview,
   getAuditIntegrity,
   getMatterAnalysis,
@@ -521,6 +522,24 @@ afterAll(async () => {
 });
 
 describe("PostgreSQL production contracts", () => {
+  it("returns only indexed document bindings within the active tenant", async () => {
+    const indexed = await getDocumentDownload(analyst, contractDocumentIds[0]!);
+    expect(indexed).toEqual({
+      name: "contract-0.txt",
+      mimeType: "text/plain",
+      objectKey: `s3://contract/${contractDocumentIds[0]}.txt`,
+      objectVersionId: "contract-version-0",
+      objectChecksumSha256: sha256("contract-fixture-document-0"),
+    });
+
+    await expect(
+      getDocumentDownload(analyst, contractDocumentIds[7]!),
+    ).resolves.toBeUndefined();
+    await expect(
+      getDocumentDownload(isolatedAnalyst, contractDocumentIds[0]!),
+    ).resolves.toBeUndefined();
+  });
+
   it("binds the selected reviewer by UUID when two members share a name", async () => {
     const reviewerIds = [
       "00000000-0000-4000-8000-000000000106",

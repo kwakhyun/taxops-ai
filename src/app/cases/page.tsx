@@ -20,9 +20,13 @@ export default async function CasesPage() {
         description="세목별 진행 상태, 세무 리스크, 근거 충족률과 승인 절차를 함께 관리합니다."
         actions={
           <>
-            <button className="button button-secondary" type="button">
+            <Link
+              className="button button-secondary"
+              href="/api/v1/cases/export"
+              prefetch={false}
+            >
               <Download size={15} /> 목록 내보내기
-            </button>
+            </Link>
             <Link className="button button-primary" href="/cases/new">
               <Plus size={15} /> 새 업무
             </Link>

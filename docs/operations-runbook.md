@@ -7,7 +7,7 @@
 3. commit SHA로 web, worker 이미지를 만들고 immutable tag와 digest를 기록합니다.
 4. Terraform plan을 cloud·security 담당자가 검토합니다.
 5. OIDC client와 session secret, DB 역할별 URL, AI key, 승인 secret, DLP·의미 분류기·문서 처리 token, 알림 HMAC secret을 Secrets Manager에서 주입합니다.
-6. `/api/health/ready`의 DB·Reviewer probe와 보안 설정 검증을 통과하고, Worker 시작 로그에서 DB·S3·ClamAV probe 성공을 확인합니다.
+6. `/api/health/ready`의 상태 코드가 정상인지 확인합니다. 의존 서비스별 진단은 `HEALTH_DETAIL_TOKEN`을 bearer token으로 전달한 내부 운영 요청에서만 확인하고, Worker 시작 로그에서 DB, S3, ClamAV probe 성공을 확인합니다.
 7. 새 프롬프트·모델이 있으면 평가 report와 Reviewer 승인 기록을 배포 변경에 첨부합니다.
 8. `TAXOPS_LOCAL_STACK`이 production task definition에 없고, 실제 의미 분류기의 host, 처리 지역, threshold와 승인된 modelVersion이 staging 평가 기록과 일치하는지 확인합니다.
 9. 전체 감사 체인 검증의 count와 head hash를 외부 WORM 저장소의 최근 서명 anchor와 대조합니다.

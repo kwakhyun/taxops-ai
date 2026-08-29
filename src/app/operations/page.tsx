@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Activity,
@@ -289,12 +290,12 @@ export default async function OperationsPage() {
             <h2>최근 요청 추적</h2>
             <p>본문 없이 식별자, 지연, 비용, 결과만 저장합니다.</p>
           </div>
-          <button
+          <Link
             className="button button-secondary button-compact"
-            type="button"
+            href="/audit"
           >
-            추적 상세 보기
-          </button>
+            감사 로그에서 보기
+          </Link>
         </div>
         <div className="table-wrap">
           <table className="data-table">

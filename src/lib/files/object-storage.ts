@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -40,6 +41,71 @@ export interface StoredObjectHandle {
   objectEtag?: string;
   objectChecksumSha256?: string;
   cleanup: () => Promise<void>;
+}
+
+function parseS3ObjectKey(objectKey: string) {
+  const url = new URL(objectKey);
+  if (
+    url.protocol !== "s3:" ||
+    !url.hostname ||
+    url.pathname.length <= 1 ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error("Invalid object storage key");
+  }
+  return {
+    bucket: url.hostname,
+    key: decodeURIComponent(url.pathname.slice(1)),
+  };
+}
+
+export async function getStoredObject(input: {
+  objectKey: string;
+  objectVersionId?: string;
+  checksumSha256?: string;
+}) {
+  if (input.objectKey.startsWith("memory://")) {
+    const stored = demoObjects().get(input.objectKey.slice("memory://".length));
+    if (!stored) return undefined;
+    if (input.checksumSha256 && stored.checksum !== input.checksumSha256) {
+      throw new Error("Stored object checksum does not match the document");
+    }
+    return {
+      body: stored.bytes,
+      contentType: stored.contentType,
+      contentLength: stored.bytes.byteLength,
+    };
+  }
+
+  const { bucket, key } = parseS3ObjectKey(input.objectKey);
+  if (process.env.OBJECT_BUCKET && bucket !== process.env.OBJECT_BUCKET) {
+    throw new Error("Object storage key is outside the configured bucket");
+  }
+  const stored = await getS3Client().send(
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      VersionId: input.objectVersionId,
+      ChecksumMode: "ENABLED",
+    }),
+  );
+  if (!stored.Body) return undefined;
+  const expectedChecksum = input.checksumSha256
+    ? Buffer.from(input.checksumSha256, "hex").toString("base64")
+    : undefined;
+  if (
+    expectedChecksum &&
+    stored.ChecksumSHA256 &&
+    stored.ChecksumSHA256 !== expectedChecksum
+  ) {
+    throw new Error("Stored object checksum does not match the document");
+  }
+  return {
+    body: stored.Body.transformToWebStream(),
+    contentType: stored.ContentType,
+    contentLength: stored.ContentLength,
+  };
 }
 
 export async function putQuarantinedObject(input: {

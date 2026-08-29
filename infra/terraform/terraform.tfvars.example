@@ -23,6 +23,7 @@ prompt_injection_classifier_threshold = 0.5
 approval_token_secret_arn  = "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:taxops/approval"
 oidc_client_secret_arn     = "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:taxops/oidc-client"
 session_secret_arn         = "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:taxops/session"
+health_detail_token_secret_arn = "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:taxops/health-detail"
 document_processor_token_secret_arn = "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:taxops/processor"
 notification_webhook_secret_arn = "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:taxops/notification"
 oidc_issuer                = "https://identity.example.com"

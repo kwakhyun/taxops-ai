@@ -73,6 +73,13 @@ export async function listDocuments(user: SessionUser, matterId?: string) {
   return adapter().listDocuments(user, matterId);
 }
 
+export async function getDocumentDownload(
+  user: SessionUser,
+  documentId: string,
+) {
+  return adapter().getDocumentDownload(user, documentId);
+}
+
 export async function getDocumentEvidenceReview(
   user: SessionUser,
   documentId: string,

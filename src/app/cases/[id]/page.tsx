@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -30,17 +31,21 @@ type Props = { params: Promise<{ id: string }> };
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
+const loadMatter = cache(async (id: string) => {
   const user = await getSessionUser();
   const matter = await findMatter(user, id);
+  return { matter, user };
+});
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const { matter } = await loadMatter(id);
   return { title: matter?.client ?? "세무 업무" };
 }
 
 export default async function CaseDetailPage({ params }: Props) {
   const { id } = await params;
-  const user = await getSessionUser();
-  const matter = await findMatter(user, id);
+  const { matter, user } = await loadMatter(id);
   if (!matter) notFound();
 
   const [matterDocuments, analysis] = await Promise.all([
@@ -94,9 +99,19 @@ export default async function CaseDetailPage({ params }: Props) {
           </div>
         </div>
         <div className="page-actions">
-          <button className="icon-button" type="button" aria-label="더보기">
-            <MoreHorizontal size={18} />
-          </button>
+          <details className="case-actions-menu">
+            <summary
+              className="icon-button"
+              role="button"
+              aria-label="추가 작업 열기"
+            >
+              <MoreHorizontal size={18} />
+            </summary>
+            <div className="case-actions-popover">
+              <Link href={documentsHref}>업무 자료 보기</Link>
+              <Link href="/audit">감사 로그 보기</Link>
+            </div>
+          </details>
           <Link className="button button-secondary" href={documentsHref}>
             <Upload size={15} /> 자료 추가
           </Link>
@@ -256,13 +271,24 @@ export default async function CaseDetailPage({ params }: Props) {
                         ? `검색 단위 ${document.chunks.toLocaleString("ko-KR")}개`
                         : "처리 중"}
                     </span>
-                    <button
-                      className="row-open"
-                      type="button"
-                      aria-label={`${document.name} 다운로드`}
-                    >
-                      <Download size={15} />
-                    </button>
+                    {document.status === "INDEXED" ? (
+                      <Link
+                        className="row-open"
+                        href={`/api/v1/documents/${document.id}/download`}
+                        prefetch={false}
+                        aria-label={`${document.name} 다운로드`}
+                      >
+                        <Download size={15} />
+                      </Link>
+                    ) : (
+                      <span
+                        className="row-open row-open-disabled"
+                        aria-label={`${document.name} 다운로드 준비 중`}
+                        title="내용 처리가 완료되면 다운로드할 수 있습니다."
+                      >
+                        <Download size={15} />
+                      </span>
+                    )}
                   </div>
                 );
               })}

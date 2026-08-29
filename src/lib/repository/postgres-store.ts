@@ -17,6 +17,7 @@ export {
 } from "@/lib/repository/postgres/ai-store";
 export {
   enqueueDocument,
+  getDocumentDownload,
   getDocumentEvidenceReview,
   getJob,
   listDocuments,

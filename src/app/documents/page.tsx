@@ -7,7 +7,7 @@ import { UploadPanel } from "@/components/upload-panel";
 import { DocumentTable } from "@/components/document-table";
 import { can } from "@/lib/auth/rbac";
 import { getSessionUser } from "@/lib/auth/session";
-import { findMatter, listDocuments, listMatters } from "@/lib/repository";
+import { listDocuments, listMatters } from "@/lib/repository";
 
 export const metadata: Metadata = { title: "자료 관리" };
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export default async function DocumentsPage({ searchParams }: Props) {
   const user = await getSessionUser();
   const matters = await listMatters(user);
   const selectedMatter = requestedMatter
-    ? await findMatter(user, requestedMatter)
+    ? matters.find((matter) => matter.id === requestedMatter)
     : undefined;
   if (requestedMatter && !selectedMatter) notFound();
   const documents = await listDocuments(user, selectedMatter?.id);

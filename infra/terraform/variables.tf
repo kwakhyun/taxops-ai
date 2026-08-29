@@ -177,6 +177,11 @@ variable "session_secret_arn" {
   description = "Secrets Manager ARN containing a random session signing secret of at least 32 characters."
 }
 
+variable "health_detail_token_secret_arn" {
+  type        = string
+  description = "Secrets Manager ARN containing the internal readiness detail bearer token."
+}
+
 variable "document_processor_token_secret_arn" {
   type = string
 }

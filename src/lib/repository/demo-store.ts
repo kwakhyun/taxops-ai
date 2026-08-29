@@ -23,6 +23,7 @@ import {
 import { resolveTenantAiPolicy } from "@/lib/security/ai-policy";
 import { evidenceManifestHash } from "@/lib/documents/evidence-manifest";
 import type { CreateMatterInput } from "@/lib/contracts/cases";
+import type { DocumentDownloadDescriptor } from "@/lib/files/download";
 
 const demoReviewTargetId = "00000000-0000-4000-8000-000000000401";
 const demoReviewerId = "00000000-0000-4000-8000-000000000102";
@@ -408,6 +409,32 @@ export function listDocuments(user: SessionUser, matterId?: string) {
       };
     }),
   );
+}
+
+export function getDocumentDownload(
+  user: SessionUser,
+  documentId: string,
+): DocumentDownloadDescriptor | undefined {
+  if (user.tenantId !== "tenant_hanul") return undefined;
+  const document = getStore().documents.find(
+    (candidate) =>
+      candidate.id === documentId && candidate.status === "INDEXED",
+  );
+  if (!document) return undefined;
+  return {
+    name: document.name,
+    mimeType: "text/plain; charset=utf-8",
+    demoBytes: new TextEncoder().encode(
+      [
+        "TaxOps 시연용 자료",
+        `자료명: ${document.name}`,
+        `분류: ${document.kind}`,
+        `등록자: ${document.uploadedBy}`,
+        `무결성 식별자: ${document.checksum}`,
+        "실제 고객 자료가 아닌 제품 기능 확인용 예시 파일입니다.",
+      ].join("\n"),
+    ),
+  };
 }
 
 export function getDocumentEvidenceReview(

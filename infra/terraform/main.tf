@@ -685,6 +685,7 @@ data "aws_iam_policy_document" "web_execution_secrets" {
       var.review_service_shared_secret_arn,
       var.oidc_client_secret_arn,
       var.session_secret_arn,
+      var.health_detail_token_secret_arn,
     ]
   }
   statement {
@@ -888,6 +889,7 @@ resource "aws_ecs_task_definition" "web" {
       { name = "REVIEW_SERVICE_SHARED_SECRET", valueFrom = var.review_service_shared_secret_arn },
       { name = "OIDC_CLIENT_SECRET", valueFrom = var.oidc_client_secret_arn },
       { name = "SESSION_SECRET", valueFrom = var.session_secret_arn },
+      { name = "HEALTH_DETAIL_TOKEN", valueFrom = var.health_detail_token_secret_arn },
     ]
     healthCheck = {
       command     = ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]

@@ -7,6 +7,7 @@ import type {
   EvidenceReviewPreview,
   SessionUser,
 } from "@/lib/domain/types";
+import type { DocumentDownloadDescriptor } from "@/lib/files/download";
 import { detectPromptInjection } from "@/lib/ai/guardrails";
 import type { DemoJob } from "@/lib/repository/demo-store";
 import { appendAuditEventTx } from "@/lib/repository/postgres/audit-store";
@@ -50,6 +51,15 @@ interface JobRow {
   idempotency_key: string;
   payload: { documentId?: string };
   created_at: Date;
+}
+
+interface DocumentDownloadRow {
+  original_name: string;
+  mime_type: string;
+  object_key: string;
+  object_version_id: string | null;
+  object_checksum_sha256: string | null;
+  checksum_sha256: string;
 }
 
 function mapDocument(row: DocumentRow): DocumentRecord {
@@ -116,6 +126,41 @@ export async function listDocuments(user: SessionUser, matterId?: string) {
       [user.tenantId, matterId ?? null, user.id],
     );
     return rows.map(mapDocument);
+  });
+}
+
+export async function getDocumentDownload(
+  user: SessionUser,
+  documentId: string,
+): Promise<DocumentDownloadDescriptor | undefined> {
+  return withTenantSql(user.tenantId, async (transaction) => {
+    const rows = await transaction<DocumentDownloadRow[]>`
+      SELECT original_name, mime_type, object_key, object_version_id,
+             object_checksum_sha256, checksum_sha256
+      FROM documents
+      WHERE tenant_id = ${user.tenantId}
+        AND id::text = ${documentId}
+        AND status = 'INDEXED'
+      LIMIT 1
+    `;
+    const document = rows[0];
+    if (!document) return undefined;
+    if (
+      process.env.NODE_ENV === "production" &&
+      (!document.object_key.startsWith("s3://") ||
+        !document.object_version_id ||
+        document.object_checksum_sha256 !== document.checksum_sha256)
+    ) {
+      return undefined;
+    }
+    return {
+      name: document.original_name,
+      mimeType: document.mime_type,
+      objectKey: document.object_key,
+      objectVersionId: document.object_version_id ?? undefined,
+      objectChecksumSha256:
+        document.object_checksum_sha256 ?? document.checksum_sha256,
+    };
   });
 }
 

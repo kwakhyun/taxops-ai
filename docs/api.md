@@ -4,20 +4,22 @@
 
 ## REST API
 
-| Method | 경로                             | 권한               | 설명                                                  |
-| ------ | -------------------------------- | ------------------ | ----------------------------------------------------- |
-| GET    | `/api/health/live`               | 없음               | 프로세스 liveness                                     |
-| GET    | `/api/health/ready`              | 없음               | DB, AI, 인증, 저장소, 승인 secret, MCP 설정 readiness |
-| GET    | `/api/v1/cases`                  | `case:read`        | 현재 tenant의 케이스 목록                             |
-| POST   | `/api/v1/cases`                  | `case:write`       | 케이스 생성                                           |
-| POST   | `/api/v1/uploads`                | `document:upload`  | 검증 후 격리 저장 및 비동기 작업 enqueue              |
-| GET    | `/api/v1/documents/:id/evidence` | `workpaper:review` | 담당 Reviewer용 추출 내용과 전체 체크섬 조회          |
-| PATCH  | `/api/v1/documents/:id/evidence` | `workpaper:review` | 체크섬에 고정해 AI 근거로 승인 또는 제외              |
-| GET    | `/api/v1/jobs/:id`               | `document:read`    | 현재 tenant 작업 상태 조회                            |
-| POST   | `/api/v1/assistant`              | `assistant:run`    | 케이스 범위 AI 스트림 실행                            |
-| GET    | `/api/v1/reviews/:id`            | `workpaper:review` | 검토 대상과 artifact-bound 승인 토큰 조회             |
-| POST   | `/api/v1/reviews/:id`            | `workpaper:review` | 승인 또는 반려, 토큰 일회성 소비                      |
-| GET    | `/api/v1/audit`                  | `audit:read`       | 최근 감사 이벤트 조회                                 |
+| Method | 경로                             | 권한               | 설명                                                                           |
+| ------ | -------------------------------- | ------------------ | ------------------------------------------------------------------------------ |
+| GET    | `/api/health/live`               | 없음               | 프로세스 liveness                                                              |
+| GET    | `/api/health/ready`              | 없음               | readiness 결과만 반환. 운영 전용 bearer token을 보내면 의존 서비스별 진단 포함 |
+| GET    | `/api/v1/cases/export`           | `case:read`        | 현재 조직의 세무 업무 목록을 CSV로 내려받기                                    |
+| GET    | `/api/v1/cases`                  | `case:read`        | 현재 tenant의 케이스 목록                                                      |
+| POST   | `/api/v1/cases`                  | `case:write`       | 케이스 생성                                                                    |
+| POST   | `/api/v1/uploads`                | `document:upload`  | 검증 후 격리 저장 및 비동기 작업 enqueue                                       |
+| GET    | `/api/v1/documents/:id/download` | `document:read`    | 현재 조직에서 색인 완료된 원본 자료 내려받기                                   |
+| GET    | `/api/v1/documents/:id/evidence` | `workpaper:review` | 담당 Reviewer용 추출 내용과 전체 체크섬 조회                                   |
+| PATCH  | `/api/v1/documents/:id/evidence` | `workpaper:review` | 체크섬에 고정해 AI 근거로 승인 또는 제외                                       |
+| GET    | `/api/v1/jobs/:id`               | `document:read`    | 현재 tenant 작업 상태 조회                                                     |
+| POST   | `/api/v1/assistant`              | `assistant:run`    | 케이스 범위 AI 스트림 실행                                                     |
+| GET    | `/api/v1/reviews/:id`            | `workpaper:review` | 검토 대상과 artifact-bound 승인 토큰 조회                                      |
+| POST   | `/api/v1/reviews/:id`            | `workpaper:review` | 승인 또는 반려, 토큰 일회성 소비                                               |
+| GET    | `/api/v1/audit`                  | `audit:read`       | 최근 감사 이벤트 조회                                                          |
 
 업로드 요청은 multipart `file`, `matterId`와 `Idempotency-Key` header를 요구합니다. AI 요청은 UI message 배열과 `matterId`를 받으며, 서버가 사용자의 케이스 접근을 다시 확인합니다. AI 실행은 월간 예산에서 최대 실행 비용을 원자적으로 예약한 뒤, 완료 시 실제 추정치로 정산합니다.
 

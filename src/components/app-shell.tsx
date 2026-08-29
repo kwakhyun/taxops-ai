@@ -15,7 +15,6 @@ import {
   Menu,
   Plus,
   ScrollText,
-  Search,
   ShieldCheck,
   X,
   type LucideIcon,
@@ -28,6 +27,7 @@ import {
   type ReactNode,
 } from "react";
 import { clsx } from "clsx";
+import { CommandSearch } from "@/components/command-search";
 import type { Permission, Role, SessionUser } from "@/lib/domain/types";
 
 type NavItem = {
@@ -317,15 +317,7 @@ export function AppShell({
             <Menu size={21} />
           </button>
 
-          <Link
-            className="command-search"
-            href="/cases"
-            aria-label="세무 업무 검색 열기"
-          >
-            <Search size={17} />
-            <span>세무 업무, 자료, 고객사 검색</span>
-            <kbd>⌘ K</kbd>
-          </Link>
+          <CommandSearch permissions={permissions} />
 
           <div className="topbar-actions">
             <span className="environment-pill">

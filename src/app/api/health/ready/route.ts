@@ -5,6 +5,7 @@ import {
 } from "@/lib/review/service-client";
 import { productionLocalStackOverrideIsDisabled } from "@/lib/security/runtime-mode";
 import { isPortfolioDemo } from "@/lib/runtime/portfolio-demo";
+import { healthDetailsAuthorized } from "@/lib/health/readiness";
 
 export const runtime = "nodejs";
 
@@ -41,7 +42,7 @@ function isAllowlistedHttpsUrl(urlName: string, allowlistName: string) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const portfolioDemo = isPortfolioDemo();
   let aiPricingConfigured = true;
   try {
@@ -163,16 +164,29 @@ export async function GET() {
       dependencies.promptInjectionClassifier !== "configured" ||
       dependencies.localStackOverride !== "disabled");
 
+  const status = portfolioDemo
+    ? "demo-ready"
+    : productionMisconfigured
+      ? "not-ready"
+      : "ready";
+  const includeDetails = healthDetailsAuthorized(
+    request.headers.get("authorization"),
+    process.env.HEALTH_DETAIL_TOKEN,
+  );
   return Response.json(
+    includeDetails
+      ? {
+          status,
+          deploymentProfile: portfolioDemo ? "portfolio-demo" : "standard",
+          dependencies,
+        }
+      : { status },
     {
-      status: portfolioDemo
-        ? "demo-ready"
-        : productionMisconfigured
-          ? "not-ready"
-          : "ready",
-      deploymentProfile: portfolioDemo ? "portfolio-demo" : "standard",
-      dependencies,
+      status: productionMisconfigured ? 503 : 200,
+      headers: {
+        "cache-control": "no-store",
+        vary: "authorization",
+      },
     },
-    { status: productionMisconfigured ? 503 : 200 },
   );
 }

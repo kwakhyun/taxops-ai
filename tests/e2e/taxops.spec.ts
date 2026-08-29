@@ -38,6 +38,42 @@ test.describe("TaxOps AI critical user journeys", () => {
     ).toBeVisible();
   });
 
+  test("exports matters, searches with the command palette, and downloads an indexed document", async ({
+    page,
+  }) => {
+    await page.goto("/cases");
+    const exportStarted = page.waitForEvent("download");
+    await page.getByRole("link", { name: "목록 내보내기" }).click();
+    const exported = await exportStarted;
+    expect(exported.suggestedFilename()).toBe("tax-matters.csv");
+
+    await page.keyboard.press("Control+K");
+    const commandPalette = page.getByRole("dialog", { name: "통합 검색" });
+    await expect(commandPalette).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("button", {
+        name: /세무 업무, 자료, 고객사 검색/,
+      }),
+    ).toBeFocused();
+    await page.keyboard.press("Control+K");
+    await page.getByLabel("통합 검색어").fill("리브온");
+    await commandPalette.getByRole("link", { name: /리브온 커머스/ }).click();
+    await expect(page).toHaveURL(/\/cases\/cit-2025$/);
+
+    await page.goto("/cases/vat-2025-q4");
+    await page.getByRole("button", { name: "추가 작업 열기" }).click();
+    await expect(
+      page.getByRole("link", { name: "감사 로그 보기" }),
+    ).toBeVisible();
+    const downloadStarted = page.waitForEvent("download");
+    await page
+      .getByRole("link", { name: "2025_2기_매입매출장.xlsx 다운로드" })
+      .click();
+    const downloaded = await downloadStarted;
+    expect(downloaded.suggestedFilename()).toBe("2025_2기_매입매출장.xlsx");
+  });
+
   test("rejects a spoofed file and queues a valid text document", async ({
     page,
   }) => {
@@ -125,6 +161,14 @@ test.describe("TaxOps AI critical user journeys", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { code: "PROMPT_INJECTION_DETECTED" },
     });
+  });
+
+  test("keeps public readiness responses free of dependency details", async ({
+    request,
+  }) => {
+    const response = await request.get("/api/health/ready");
+    expect(response.ok()).toBe(true);
+    await expect(response.json()).resolves.toEqual({ status: "ready" });
   });
 
   test("separates uploader and reviewer and binds evidence approval to the checksum", async ({
