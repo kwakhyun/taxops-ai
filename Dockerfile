@@ -26,6 +26,7 @@ RUN npm ci --omit=dev \
 COPY --chown=worker:nodejs src/worker ./src/worker
 COPY --chown=worker:nodejs src/lib/jobs ./src/lib/jobs
 COPY --chown=worker:nodejs src/lib/security ./src/lib/security
+COPY --chown=worker:nodejs src/lib/runtime ./src/lib/runtime
 COPY --chown=worker:nodejs src/lib/files ./src/lib/files
 COPY --chown=worker:nodejs src/lib/documents ./src/lib/documents
 COPY --chown=worker:nodejs src/lib/ai/guardrails.ts ./src/lib/ai/guardrails.ts
