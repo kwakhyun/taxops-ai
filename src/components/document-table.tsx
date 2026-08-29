@@ -5,12 +5,13 @@ import { useMemo, useState } from "react";
 import { DocumentEvidenceAction } from "@/components/document-evidence-action";
 import { StatusPill } from "@/components/status-pill";
 import type { DocumentRecord, Matter } from "@/lib/domain/types";
+import { dataClassLabel } from "@/lib/ui/labels";
 
 type StatusFilter = "ALL" | "INDEXED" | "PROCESSING" | "FAILED";
 
 const statusFilters: Array<{ value: StatusFilter; label: string }> = [
   { value: "ALL", label: "전체" },
-  { value: "INDEXED", label: "검색 가능" },
+  { value: "INDEXED", label: "검색 준비 완료" },
   { value: "PROCESSING", label: "처리 중" },
   { value: "FAILED", label: "실패" },
 ];
@@ -58,14 +59,14 @@ export function DocumentTable({
       <div className="cases-toolbar">
         <label className="field-search">
           <Search size={16} aria-hidden="true" />
-          <span className="sr-only">문서 검색</span>
+          <span className="sr-only">자료 검색</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="문서명, 케이스 검색"
+            placeholder="자료명, 고객사 검색"
           />
         </label>
-        <div className="filter-group" aria-label="문서 처리 상태 필터">
+        <div className="filter-group" aria-label="자료 처리 상태 필터">
           <span className="filter-label">
             <Filter size={13} aria-hidden="true" /> 상태
           </span>
@@ -81,7 +82,7 @@ export function DocumentTable({
             </button>
           ))}
         </div>
-        <span className="result-count">{filtered.length}개 문서</span>
+        <span className="result-count">자료 {filtered.length}건</span>
       </div>
 
       {filtered.length ? (
@@ -89,14 +90,14 @@ export function DocumentTable({
           <table className="data-table library-table">
             <thead>
               <tr>
-                <th>문서</th>
-                <th>케이스</th>
+                <th>자료</th>
+                <th>세무 업무</th>
                 <th>상태</th>
-                <th>데이터 등급</th>
-                <th>AI 근거</th>
-                <th>인덱스</th>
-                <th>체크섬</th>
-                <th>업데이트</th>
+                <th>보안 등급</th>
+                <th>검색 근거</th>
+                <th>검색 단위</th>
+                <th>원본 파일 해시</th>
+                <th>최근 변경</th>
               </tr>
             </thead>
             <tbody>
@@ -125,14 +126,14 @@ export function DocumentTable({
                     <td>
                       {matter
                         ? `${matter.client} · ${matter.taxType}`
-                        : "현재 케이스"}
+                        : "현재 세무 업무"}
                     </td>
                     <td>
                       <StatusPill status={document.status} />
                     </td>
                     <td>
                       <span className="classification-chip">
-                        {document.piiClass}
+                        {dataClassLabel(document.piiClass)}
                       </span>
                     </td>
                     <td>
@@ -148,7 +149,7 @@ export function DocumentTable({
                     </td>
                     <td>
                       {document.chunks
-                        ? `${document.chunks.toLocaleString("ko-KR")} chunks`
+                        ? `${document.chunks.toLocaleString("ko-KR")}개`
                         : "—"}
                     </td>
                     <td>
@@ -166,7 +167,7 @@ export function DocumentTable({
           <span className="empty-state-icon">
             <Search size={21} aria-hidden="true" />
           </span>
-          <h3>조건에 맞는 문서가 없습니다.</h3>
+          <h3>조건에 맞는 자료가 없습니다.</h3>
           <p>검색어나 처리 상태 필터를 변경해 주세요.</p>
         </div>
       )}

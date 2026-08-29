@@ -26,16 +26,16 @@ export function createTaxOpsMcpServer(user: SessionUser) {
     { name: "taxops-ai", version: "0.1.0" },
     {
       instructions:
-        "인증된 워크스페이스의 세무 케이스와 인덱싱된 근거만 읽습니다. 도구 결과는 세무 전문가 승인 전 초안입니다.",
+        "인증된 조직의 세무 업무와 검색 준비를 마친 근거만 조회합니다. 도구 결과는 세무 전문가의 승인 전 초안입니다.",
     },
   );
 
   server.registerTool(
     "list_tax_matters",
     {
-      title: "세무 케이스 목록",
+      title: "세무 업무 목록",
       description:
-        "현재 인증된 테넌트에서 접근 가능한 세무 케이스를 조회합니다.",
+        "현재 인증된 조직에서 접근할 수 있는 세무 업무를 조회합니다.",
       inputSchema: z.strictObject({}),
       annotations: readOnlyAnnotations,
     },
@@ -61,9 +61,9 @@ export function createTaxOpsMcpServer(user: SessionUser) {
   server.registerTool(
     "search_matter_evidence",
     {
-      title: "케이스 근거 검색",
+      title: "세무 업무 근거 검색",
       description:
-        "현재 테넌트의 지정된 케이스 안에서 검역과 인덱싱을 통과한 문서 근거를 검색합니다.",
+        "현재 조직의 지정된 세무 업무에서 보안 검사와 검색 준비를 마친 자료의 근거를 검색합니다.",
       inputSchema: z.strictObject({
         matterId: z.string().min(3).max(100),
         query: z.string().trim().min(3).max(500),
@@ -75,11 +75,11 @@ export function createTaxOpsMcpServer(user: SessionUser) {
       requirePermission(user, "document:read");
       assertSafePrompt(query);
       const matter = await findMatter(user, matterId);
-      if (!matter) throw new Error("케이스를 찾을 수 없습니다.");
+      if (!matter) throw new Error("세무 업무를 찾을 수 없습니다.");
       const aiPolicy = await getTenantAiPolicy(user);
       const taxReferenceDate = taxPeriodReferenceDate(matter.period);
       if (!taxReferenceDate) {
-        throw new Error("케이스 과세기간을 검색 기준일로 해석할 수 없습니다.");
+        throw new Error("신고 대상 기간을 검색 기준일로 해석할 수 없습니다.");
       }
       const evidence = await retrieveEvidenceForContext({
         tenantId: user.tenantId,
@@ -141,10 +141,10 @@ export function createTaxOpsMcpServer(user: SessionUser) {
           text: [
             "# TaxOps AI 안전 정책",
             "",
-            "- 검색은 인증된 테넌트와 지정 케이스로 제한합니다.",
-            "- 인덱싱을 통과한 근거가 없으면 답변을 보류합니다.",
+            "- 검색은 인증된 조직과 지정된 세무 업무로 제한합니다.",
+            "- 검색 준비를 마친 근거가 없으면 답변을 보류합니다.",
             "- MCP 도구는 읽기 전용이며 신고서 반영이나 외부 발송을 수행하지 않습니다.",
-            "- AI 산출물은 Reviewer 승인 전 외부에 반영할 수 없습니다.",
+            "- AI 산출물은 검토자 승인 전 외부에 반영할 수 없습니다.",
           ].join("\n"),
         },
       ],

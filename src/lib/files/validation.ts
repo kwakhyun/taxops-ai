@@ -360,14 +360,14 @@ export function validateFile(input: {
   const extension = name.split(".").pop()?.toLocaleLowerCase("en-US") ?? "";
   if (!(allowedExtensions as readonly string[]).includes(extension)) {
     throw new FileValidationError(
-      "파일 확장자와 MIME 유형이 일치하지 않습니다.",
+      "파일 확장자와 실제 형식이 일치하지 않습니다.",
       "EXTENSION_MISMATCH",
     );
   }
 
   if (!hasExpectedSignature(input.type, input.bytes)) {
     throw new FileValidationError(
-      "파일 서명이 MIME 유형과 일치하지 않습니다.",
+      "파일 내용이 선택한 형식과 일치하지 않습니다.",
       "INVALID_SIGNATURE",
     );
   }

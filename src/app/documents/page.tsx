@@ -9,7 +9,7 @@ import { can } from "@/lib/auth/rbac";
 import { getSessionUser } from "@/lib/auth/session";
 import { findMatter, listDocuments, listMatters } from "@/lib/repository";
 
-export const metadata: Metadata = { title: "문서 보관함" };
+export const metadata: Metadata = { title: "자료 관리" };
 export const dynamic = "force-dynamic";
 
 type Props = { searchParams: Promise<{ matter?: string | string[] }> };
@@ -39,12 +39,12 @@ export default async function DocumentsPage({ searchParams }: Props) {
   return (
     <>
       <PageHeading
-        eyebrow="보안 문서 처리 흐름"
-        title="문서 보관함"
+        eyebrow="안전한 자료 처리"
+        title="자료 관리"
         description={
           selectedMatter
-            ? `${selectedMatter.client} 케이스의 검역, 파싱, 청킹, 검색 인덱싱 상태를 추적합니다.`
-            : "원본 파일의 검역, 파싱, 청킹, 검색 인덱싱 상태와 데이터 분류를 추적합니다."
+            ? `${selectedMatter.client} 업무 자료의 보안 검사, 내용 추출, 검색 등록 상태를 확인합니다.`
+            : "원본 파일의 보안 검사, 내용 추출, 검색 등록 상태와 보안 등급을 확인합니다."
         }
       />
 
@@ -60,7 +60,7 @@ export default async function DocumentsPage({ searchParams }: Props) {
             </span>
             <div>
               <strong>{indexedChunks.toLocaleString("ko-KR")}</strong>
-              <span>검색 가능한 chunks</span>
+              <span>검색 가능한 자료 구간</span>
             </div>
           </div>
           <div>
@@ -73,20 +73,20 @@ export default async function DocumentsPage({ searchParams }: Props) {
                   ? `${Math.round((approvedDocuments / documents.length) * 100)}%`
                   : "—"}
               </strong>
-              <span>AI 근거 승인 비율</span>
+              <span>검색 근거 승인율</span>
             </div>
           </div>
         </aside>
       </div>
 
-      <nav className="filter-group" aria-label="업로드 대상 케이스">
+      <nav className="filter-group" aria-label="자료를 연결할 세무 업무">
         <Link
           className={
             "filter-chip " + (!selectedMatter ? "filter-chip-active" : "")
           }
           href="/documents"
         >
-          전체 문서
+          전체 자료
         </Link>
         {matters.map((matter) => (
           <Link

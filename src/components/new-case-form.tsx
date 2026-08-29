@@ -27,7 +27,7 @@ export function NewCaseForm({
   const [form, setForm] = useState({
     client: "한빛테크 주식회사",
     taxType: "부가가치세",
-    period: "2026년 1기 예정",
+    period: "2026년 제1기 예정신고",
     summary: "매입세액 공제와 영세율 첨부서류 검토",
     dueDate: "2026-10-26",
     reviewerId: reviewers[0]?.id ?? "",
@@ -57,14 +57,14 @@ export function NewCaseForm({
         error?: { message: string };
       };
       if (!response.ok || !payload.data)
-        throw new Error(payload.error?.message ?? "생성 실패");
+        throw new Error(payload.error?.message ?? "업무 등록 실패");
       router.push(`/cases/${payload.data.id}`);
       router.refresh();
     } catch (cause) {
       setError(
         cause instanceof Error
           ? cause.message
-          : "케이스를 생성하지 못했습니다.",
+          : "세무 업무를 등록하지 못했습니다.",
       );
     } finally {
       setSubmitting(false);
@@ -74,9 +74,9 @@ export function NewCaseForm({
   return (
     <div className="new-case-layout">
       <aside className="card form-steps">
-        <span className="card-kicker">안내형 설정</span>
-        <h2>케이스 설정</h2>
-        <p>필수 정보만 입력하면 자료 수집과 AI 검토를 시작할 수 있습니다.</p>
+        <span className="card-kicker">단계별 등록</span>
+        <h2>세무 업무 등록</h2>
+        <p>필수 정보를 입력하면 자료 수집과 AI 분석을 시작할 수 있습니다.</p>
         <ol>
           {steps.map((label, index) => (
             <li
@@ -100,7 +100,8 @@ export function NewCaseForm({
         <div className="form-security-note">
           <ShieldCheck size={17} />
           <span>
-            모든 케이스는 현재 워크스페이스에 격리되고 감사 로그에 기록됩니다.
+            모든 업무 자료는 현재 조직 안에서 분리 보관되며 감사 로그에
+            기록됩니다.
           </span>
         </div>
       </aside>
@@ -113,10 +114,10 @@ export function NewCaseForm({
             </span>
             <h1>{steps[step]}</h1>
             <p>
-              {step === 0 && "거래처와 검토할 세목을 입력해 주세요."}
-              {step === 1 && "신고 기간과 핵심 검토 범위를 정의해 주세요."}
-              {step === 2 && "승인 책임자와 업무 마감일을 지정해 주세요."}
-              {step === 3 && "입력 내용을 확인하고 케이스를 생성합니다."}
+              {step === 0 && "고객사와 검토할 세목을 입력해 주세요."}
+              {step === 1 && "신고 대상 기간과 핵심 검토 범위를 입력해 주세요."}
+              {step === 2 && "검토자와 업무 마감일을 지정해 주세요."}
+              {step === 3 && "입력 내용을 확인하고 세무 업무를 등록합니다."}
             </p>
           </div>
           <span className="step-counter">0{step + 1}</span>
@@ -126,13 +127,13 @@ export function NewCaseForm({
           {step === 0 ? (
             <div className="form-grid">
               <label className="form-field form-field-wide">
-                <span>거래처명</span>
+                <span>고객사명</span>
                 <input
                   value={form.client}
                   onChange={(event) => update("client", event.target.value)}
-                  placeholder="법인 또는 개인사업자명"
+                  placeholder="법인명 또는 개인사업자 상호"
                 />
-                <small>법적 명칭을 입력해 주세요.</small>
+                <small>사업자등록증에 기재된 명칭을 입력해 주세요.</small>
               </label>
               <label className="form-field">
                 <span>세목</span>
@@ -151,7 +152,7 @@ export function NewCaseForm({
                 <span>업무 유형</span>
                 <select defaultValue="신고 검토">
                   <option>신고 검토</option>
-                  <option>세무 조사 대응</option>
+                  <option>세무조사 대응</option>
                   <option>세무 진단</option>
                   <option>유권해석 검토</option>
                 </select>
@@ -162,11 +163,11 @@ export function NewCaseForm({
           {step === 1 ? (
             <div className="form-grid">
               <label className="form-field form-field-wide">
-                <span>신고·검토 기간</span>
+                <span>신고 대상 기간</span>
                 <input
                   value={form.period}
                   onChange={(event) => update("period", event.target.value)}
-                  placeholder="예: 2026년 1기 예정"
+                  placeholder="예: 2026년 제1기 예정신고"
                 />
               </label>
               <label className="form-field form-field-wide">
@@ -178,7 +179,7 @@ export function NewCaseForm({
                   placeholder="검토할 쟁점과 기대 산출물을 작성해 주세요."
                 />
                 <small>
-                  AI 워크플로우의 초기 범위로 사용되며 이후 수정할 수 있습니다.
+                  AI 분석의 초기 범위로 사용되며 이후에도 수정할 수 있습니다.
                 </small>
               </label>
             </div>
@@ -194,7 +195,8 @@ export function NewCaseForm({
                 >
                   {reviewers.map((reviewer) => (
                     <option key={reviewer.id} value={reviewer.id}>
-                      {reviewer.name} / {reviewer.role}
+                      {reviewer.name} ·{" "}
+                      {reviewer.role === "ADMIN" ? "관리자" : "검토자"}
                     </option>
                   ))}
                 </select>
@@ -211,7 +213,7 @@ export function NewCaseForm({
                 <span className="reviewer-avatar">{owner.initials}</span>
                 <div>
                   <strong>{owner.name} · 담당자</strong>
-                  <small>케이스 담당, 자료 업로드, AI 초안 생성</small>
+                  <small>업무 관리, 자료 등록, AI 초안 작성</small>
                 </div>
                 <ArrowRight size={16} />
                 <span className="reviewer-avatar reviewer-avatar-violet">
@@ -228,11 +230,11 @@ export function NewCaseForm({
           {step === 3 ? (
             <div className="review-summary">
               <div>
-                <span>거래처</span>
+                <span>고객사</span>
                 <strong>{form.client}</strong>
               </div>
               <div>
-                <span>세목 / 기간</span>
+                <span>세목 · 기간</span>
                 <strong>
                   {form.taxType} · {form.period}
                 </strong>
@@ -242,7 +244,7 @@ export function NewCaseForm({
                 <strong>{form.summary}</strong>
               </div>
               <div>
-                <span>검토자 / 마감</span>
+                <span>검토자 · 마감일</span>
                 <strong>
                   {selectedReviewer?.name ?? "미지정"} · {form.dueDate}
                 </strong>
@@ -250,8 +252,8 @@ export function NewCaseForm({
               <div className="review-policy">
                 <ShieldCheck size={18} />
                 <p>
-                  AI는 읽기 전용 검색과 계산만 자동 수행합니다. 결론 확정과 외부
-                  반영은 검토자 승인 전까지 차단됩니다.
+                  AI는 근거 검색과 계산만 자동으로 수행합니다. 검토자가 승인하기
+                  전까지 결론 확정과 외부 반영은 차단됩니다.
                 </p>
               </div>
             </div>
@@ -298,7 +300,7 @@ export function NewCaseForm({
               ) : (
                 <Check size={15} />
               )}
-              케이스 생성
+              업무 등록
             </button>
           )}
         </div>

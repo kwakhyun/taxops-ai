@@ -1,16 +1,5 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
-import {
-  DefaultChatTransport,
-  getToolName,
-  isDataUIPart,
-  isToolUIPart,
-  type DataUIPart,
-  type DynamicToolUIPart,
-  type TextUIPart,
-  type ToolUIPart,
-} from "ai";
 import {
   ArrowUp,
   Bot,
@@ -18,7 +7,6 @@ import {
   ChevronRight,
   CircleDollarSign,
   FileText,
-  LoaderCircle,
   Paperclip,
   RefreshCw,
   SearchCheck,
@@ -26,360 +14,45 @@ import {
   Sparkles,
   Square,
 } from "lucide-react";
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import type { TaxAssistantMessage, TaxDataParts } from "@/lib/ai/types";
-import { evidence as seededEvidence } from "@/lib/domain/fixtures";
+import { useState } from "react";
+import { AssistantMessagePart } from "@/components/assistant-message-part";
+import type { AssistantEvidence } from "@/components/assistant-message-model";
+import { useTaxAssistant } from "@/components/use-tax-assistant";
 import type { Matter } from "@/lib/domain/types";
+import { workflowStageLabel } from "@/lib/ui/labels";
 
 const suggestions = [
-  "매입세액 불공제 의심 항목과 신고서 반영 차이를 찾아줘",
-  "영세율 첨부서류 누락 여부를 근거와 함께 점검해줘",
-  "워크페이퍼 초안의 핵심 결론과 확인 요청을 정리해줘",
+  "매입세액 불공제 의심 항목과 신고서 반영 차이를 찾아 주세요",
+  "영세율 첨부서류 누락 여부를 근거와 함께 점검해 주세요",
+  "검토조서 초안의 핵심 결론과 추가 확인 사항을 정리해 주세요",
 ];
-
-function AssistantText({ part }: { part: TextUIPart }) {
-  return <div className="assistant-text">{part.text}</div>;
-}
-
-function DataPart({ part }: { part: DataUIPart<TaxDataParts> }) {
-  if (part.type === "data-workflow") {
-    return (
-      <div className="inline-workflow">
-        {part.data.status === "running" ? (
-          <LoaderCircle className="spin" size={13} />
-        ) : (
-          <Check size={13} />
-        )}
-        <span>{part.data.label}</span>
-        <code>{part.data.stage}</code>
-      </div>
-    );
-  }
-  if (part.type === "data-evidence") {
-    return (
-      <div className="inline-evidence">
-        <span className="inline-evidence-number">
-          {part.data.id.split("_").at(-1)?.slice(-2)}
-        </span>
-        <div>
-          <strong>{part.data.documentName}</strong>
-          <small>
-            {part.data.location} · score {part.data.score.toFixed(2)}
-          </small>
-          <p>{part.data.excerpt}</p>
-        </div>
-      </div>
-    );
-  }
-  if (part.type === "data-verification") {
-    return (
-      <div className="verification-banner">
-        <ShieldCheck size={16} />
-        <div>
-          <strong>근거 검증 결과</strong>
-          {part.data.totalClaims ? (
-            <span>
-              {part.data.totalClaims}개 주장 중 {part.data.supportedClaims}개
-              지원 · 커버리지 {part.data.coverage}%
-            </span>
-          ) : (
-            <span>
-              자동 검증을 통과한 결론이 없어 전문가 확인이 필요합니다.
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  }
-  if (part.type === "data-budget") {
-    return (
-      <div className="answer-meta">
-        <span>{(part.data.latencyMs / 1000).toFixed(1)}초</span>
-        <span>{part.data.tokens.toLocaleString("ko-KR")} tokens</span>
-        <span>약 ₩{part.data.estimatedCostKrw.toLocaleString("ko-KR")}</span>
-        <span>{part.data.promptVersion}</span>
-      </div>
-    );
-  }
-  return null;
-}
-
-function objectValue(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
-type DisplayEvidence = {
-  id: string;
-  documentName: string;
-  location: string;
-  excerpt: string;
-};
-
-function evidenceSnapshot(value: unknown): DisplayEvidence[] {
-  return Array.isArray(value)
-    ? value.flatMap((candidate) => {
-        const item = objectValue(candidate);
-        return item &&
-          typeof item.id === "string" &&
-          typeof item.documentName === "string" &&
-          typeof item.excerpt === "string"
-          ? [
-              {
-                id: item.id,
-                documentName: item.documentName,
-                location: item.page
-                  ? `${String(item.page)}쪽 · ${String(item.section ?? "문서 본문")}`
-                  : String(item.section ?? "문서 본문"),
-                excerpt: item.excerpt,
-              },
-            ]
-          : [];
-      })
-    : [];
-}
-
-function ToolResult({
-  part,
-  evidence,
-  matterId,
-}: {
-  part: ToolUIPart | DynamicToolUIPart;
-  evidence: DisplayEvidence[];
-  matterId: string;
-}) {
-  const name = getToolName(part);
-  if (part.state !== "output-available") {
-    return (
-      <div className="tool-call">
-        <LoaderCircle className="spin" size={13} />
-        <span>{name}</span>
-        <code>{part.state}</code>
-      </div>
-    );
-  }
-  const output = objectValue(part.output);
-  if (name === "abstain" && output) {
-    return (
-      <div className="verification-banner">
-        <ShieldCheck size={16} />
-        <div>
-          <strong>{String(output.message ?? "답변을 보류합니다.")}</strong>
-          <span>{String(output.reason ?? output.nextAction ?? "")}</span>
-        </div>
-      </div>
-    );
-  }
-  if (name === "deliverVerifiedAnswer" && output) {
-    const citedIds = Array.isArray(output.evidenceIds)
-      ? output.evidenceIds.filter((id): id is string => typeof id === "string")
-      : [];
-    const boundEvidence = evidenceSnapshot(output.evidence);
-    const citations = citedIds.flatMap((id) => {
-      const bound = boundEvidence.find((item) => item.id === id);
-      if (bound) return [bound];
-      const source = evidence.find((item) => item.id === id);
-      return source ? [source] : [];
-    });
-    return (
-      <div className="assistant-text">
-        <strong>{String(output.title ?? "검증된 분석")}</strong>
-        <p>{String(output.conclusion ?? "")}</p>
-        <small>
-          독립 근거 검증 통과 / 근거 {citedIds.length}건 / 검토자 확인 필요
-        </small>
-        {citations.map((source) => (
-          <div className="inline-evidence" key={source.id}>
-            <SearchCheck size={14} />
-            <div>
-              <strong>{source.documentName}</strong>
-              <small>{source.location}</small>
-              <p>{source.excerpt}</p>
-            </div>
-          </div>
-        ))}
-        <Link href={`/documents?matter=${matterId}`}>원문 문서 확인</Link>
-      </div>
-    );
-  }
-  if (name === "proposeWorkpaper" && output) {
-    return (
-      <div className="verification-banner">
-        <FileText size={16} />
-        <div>
-          <strong>워크페이퍼 초안과 승인 요청을 저장했습니다.</strong>
-          <span>
-            version {String(output.version ?? "1")} / target{" "}
-            {String(output.targetId ?? "").slice(0, 12)}…
-          </span>
-        </div>
-      </div>
-    );
-  }
-  if (name === "independentReview" && output) {
-    return (
-      <div className="verification-banner">
-        <ShieldCheck size={16} />
-        <div>
-          <strong>독립 근거 검증 {String(output.verdict ?? "완료")}</strong>
-          <span>
-            지원 주장 {String(output.supportedClaimCount ?? 0)}/
-            {String(output.totalClaimCount ?? 0)}
-          </span>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="tool-call">
-      <Check size={13} />
-      <span>{name}</span>
-      <code>{part.state}</code>
-    </div>
-  );
-}
-
-function extractCitedEvidenceIds(message?: TaxAssistantMessage) {
-  if (message?.role !== "assistant") return [];
-  for (const part of message.parts.toReversed()) {
-    if (!isToolUIPart(part) || part.state !== "output-available") continue;
-    const name = getToolName(part);
-    if (name !== "deliverVerifiedAnswer" && name !== "proposeWorkpaper") {
-      continue;
-    }
-    const output = objectValue(part.output);
-    if (!Array.isArray(output?.evidenceIds)) return [];
-    return output.evidenceIds.filter(
-      (id): id is string => typeof id === "string",
-    );
-  }
-  return [];
-}
 
 export function AssistantWorkspace({
   matter,
   userName,
   userInitials,
   documentCount,
-  showSeededEvidence,
+  initialEvidence,
 }: {
   matter: Matter;
   userName: string;
   userInitials: string;
   documentCount: number;
-  showSeededEvidence: boolean;
+  initialEvidence: AssistantEvidence[];
 }) {
   const [input, setInput] = useState("");
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport<TaxAssistantMessage>({
-        api: "/api/v1/assistant",
-        prepareSendMessagesRequest: ({ messages }) => ({
-          body: { messages, matterId: matter.id },
-        }),
-      }),
-    [matter.id],
-  );
-  const { messages, sendMessage, status, stop, regenerate, error } =
-    useChat<TaxAssistantMessage>({
-      id: `taxops-${matter.id}`,
-      transport,
-    });
-  const busy = status === "submitted" || status === "streaming";
-
-  const currentStage = useMemo(() => {
-    for (const message of [...messages].reverse()) {
-      for (const part of [...message.parts].reverse()) {
-        if (part.type === "data-workflow") return part.data.stage;
-      }
-    }
-    return undefined;
-  }, [messages]);
-
-  const streamedEvidence = useMemo(() => {
-    const latestMessage = messages.at(-1);
-    if (latestMessage?.role !== "assistant") return [];
-    return latestMessage.parts.flatMap((part) => {
-      if (part.type === "data-evidence") {
-        return [
-          {
-            id: part.data.id,
-            documentName: part.data.documentName,
-            location: part.data.location,
-            excerpt: part.data.excerpt,
-            score: part.data.score,
-            contentHash: part.data.id,
-          },
-        ];
-      }
-      if (
-        isToolUIPart(part) &&
-        [
-          "searchTaxSources",
-          "deliverVerifiedAnswer",
-          "proposeWorkpaper",
-        ].includes(getToolName(part)) &&
-        part.state === "output-available"
-      ) {
-        const output = objectValue(part.output);
-        const values = Array.isArray(part.output)
-          ? part.output
-          : Array.isArray(output?.evidence)
-            ? output.evidence
-            : [];
-        return values.flatMap((value) => {
-          const item = objectValue(value);
-          return item &&
-            typeof item.id === "string" &&
-            typeof item.documentName === "string" &&
-            typeof item.excerpt === "string"
-            ? [
-                {
-                  id: item.id,
-                  documentName: item.documentName,
-                  location: String(item.location ?? "문서 본문"),
-                  excerpt: item.excerpt,
-                  score: Number(item.score ?? 0),
-                  contentHash: String(item.contentHash ?? item.id),
-                },
-              ]
-            : [];
-        });
-      }
-      return [];
-    });
-  }, [messages]);
-
-  const latestVerification = useMemo(() => {
-    const latestMessage = messages.at(-1);
-    if (latestMessage?.role !== "assistant") return undefined;
-    for (const part of latestMessage.parts.toReversed()) {
-      if (part.type === "data-verification") return part.data;
-    }
-    return undefined;
-  }, [messages]);
-
-  const citedEvidenceIds = extractCitedEvidenceIds(messages.at(-1));
-
-  const citedStreamedEvidence = citedEvidenceIds.length
-    ? streamedEvidence.filter((item) => citedEvidenceIds.includes(item.id))
-    : streamedEvidence;
-  const panelEvidence = citedStreamedEvidence.length
-    ? citedStreamedEvidence
-    : messages.length
-      ? []
-      : (showSeededEvidence ? seededEvidence : []).map((item) => ({
-          id: item.id,
-          documentName: item.documentName,
-          location: item.page
-            ? `${item.page}쪽 · ${item.section}`
-            : item.section,
-          excerpt: item.excerpt,
-          score: item.score,
-          contentHash: item.contentHash,
-        }));
+  const {
+    messages,
+    sendMessage,
+    stop,
+    regenerate,
+    error,
+    busy,
+    currentStage,
+    streamedEvidence,
+    latestVerification,
+    panelEvidence,
+  } = useTaxAssistant({ matterId: matter.id, initialEvidence });
 
   function submit(text = input) {
     const value = text.trim();
@@ -406,11 +79,11 @@ export function AssistantWorkspace({
               <FileText size={12} /> 자료 {documentCount}건
             </span>
             <span>
-              <ShieldCheck size={12} /> 보호 모드
+              <ShieldCheck size={12} /> 승인된 자료만 검색
             </span>
             {currentStage ? (
               <span className="context-stage">
-                <Sparkles size={12} /> {currentStage}
+                <Sparkles size={12} /> {workflowStageLabel(currentStage)}
               </span>
             ) : null}
           </div>
@@ -422,11 +95,12 @@ export function AssistantWorkspace({
               <span className="assistant-orb">
                 <Sparkles size={24} />
               </span>
-              <span className="card-kicker">근거 기반 AI 업무 파트너</span>
+              <span className="card-kicker">근거 기반 세무 분석</span>
               <h1>근거를 확인하며 세무 업무를 시작하세요.</h1>
               <p>
-                TaxOps AI는 현재 케이스의 검역된 자료만 검색하고, 계산 도구와
-                독립 검증을 거쳐 답합니다. 근거가 부족하면 추측하지 않습니다.
+                TaxOps AI는 현재 업무에서 보안 검사를 통과한 자료만 검색하고,
+                계산과 독립 검증을 거쳐 답합니다. 근거가 부족하면 결론을
+                보류합니다.
               </p>
               <div className="suggestion-list">
                 {suggestions.map((suggestion) => (
@@ -460,29 +134,20 @@ export function AssistantWorkspace({
                         <span>근거 기반 분석</span>
                       ) : null}
                     </div>
-                    {message.parts.map((part, index) => {
-                      if (part.type === "text")
-                        return <AssistantText part={part} key={index} />;
-                      if (isDataUIPart(part)) {
-                        return (
-                          <DataPart
-                            part={part as DataUIPart<TaxDataParts>}
-                            key={part.id ?? index}
-                          />
-                        );
-                      }
-                      if (isToolUIPart(part)) {
-                        return (
-                          <ToolResult
-                            part={part}
-                            evidence={streamedEvidence}
-                            matterId={matter.id}
-                            key={part.toolCallId}
-                          />
-                        );
-                      }
-                      return null;
-                    })}
+                    {message.parts.map((part, index) => (
+                      <AssistantMessagePart
+                        part={part}
+                        evidence={streamedEvidence}
+                        matterId={matter.id}
+                        key={
+                          "toolCallId" in part
+                            ? part.toolCallId
+                            : "id" in part && typeof part.id === "string"
+                              ? part.id
+                              : index
+                        }
+                      />
+                    ))}
                   </div>
                 </article>
               ))}
@@ -510,7 +175,7 @@ export function AssistantWorkspace({
                   submit();
                 }
               }}
-              placeholder="현재 케이스의 자료에 대해 질문하세요…"
+              placeholder="현재 세무 업무의 자료에 대해 질문해 주세요…"
               aria-label="AI에게 질문"
               rows={2}
             />
@@ -549,7 +214,7 @@ export function AssistantWorkspace({
           </div>
           <div className="composer-note">
             <span>
-              <ShieldCheck size={11} /> 승인 전 초안
+              <ShieldCheck size={11} /> 전문가 검토 전 초안
             </span>
             <span>AI 결과는 전문가 검토가 필요합니다.</span>
             {messages.length ? (
@@ -568,20 +233,20 @@ export function AssistantWorkspace({
       <aside className="assistant-evidence-panel">
         <div className="evidence-panel-header">
           <div>
-            <span className="card-kicker">검색 적용 범위</span>
-            <h2>검색 근거</h2>
+            <span className="card-kicker">근거 검색 범위</span>
+            <h2>참고 근거</h2>
           </div>
           <SearchCheck size={18} />
         </div>
         <div className="evidence-scope">
           <div>
             <span>검색 범위</span>
-            <strong>현재 케이스 + 승인된 세무 지식</strong>
+            <strong>현재 업무 자료 및 승인된 세무 지식</strong>
           </div>
           <div>
-            <span>테넌트 필터</span>
+            <span>조직 데이터 범위</span>
             <strong>
-              <Check size={11} /> 서버 강제
+              <Check size={11} /> 현재 조직으로 제한
             </strong>
           </div>
         </div>
@@ -597,7 +262,11 @@ export function AssistantWorkspace({
                 <em>{Math.round(item.score * 100)}%</em>
               </div>
               <p>{item.excerpt}</p>
-              <code>{item.contentHash}</code>
+              <code>
+                {item.contentHash === item.id
+                  ? `근거 ID ${item.id}`
+                  : `내용 해시 ${item.contentHash}`}
+              </code>
             </article>
           ))}
           {!panelEvidence.length ? (
@@ -613,16 +282,16 @@ export function AssistantWorkspace({
           <div>
             <ShieldCheck size={15} />
             <span>
-              <strong>인용 검증</strong>
+              <strong>근거 검증</strong>
               {latestVerification
-                ? `지원 주장 ${latestVerification.supportedClaims}/${latestVerification.totalClaims}`
+                ? `분석 항목 ${latestVerification.totalClaims}개 중 ${latestVerification.supportedClaims}개 근거 확인`
                 : "검증 결과 대기"}
             </span>
           </div>
           <div>
             <CircleDollarSign size={15} />
             <span>
-              <strong>실행 예산</strong>최대 ₩300 · 8 steps
+              <strong>응답 한도</strong>응답당 최대 300원 · 최대 8단계
             </span>
           </div>
         </div>

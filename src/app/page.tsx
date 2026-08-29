@@ -65,7 +65,7 @@ export default async function DashboardPage() {
               <FileSearch size={16} /> 자료 업로드
             </Link>
             <Link className="button button-primary" href="/cases/new">
-              <Plus size={16} /> 새 케이스
+              <Plus size={16} /> 새 업무
             </Link>
           </>
         }
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
 
       <section className="metric-grid" aria-label="핵심 업무 지표">
         <MetricCard
-          label="진행 중 케이스"
+          label="진행 중인 업무"
           value={String(active.length)}
           helper={"전체 " + matters.length + "건"}
           icon={BriefcaseBusiness}
@@ -90,21 +90,21 @@ export default async function DashboardPage() {
         <MetricCard
           label="검토 중"
           value={String(reviewCount)}
-          helper="현재 케이스 상태 기준"
+          helper="현재 업무 상태 기준"
           icon={FileCheck2}
           tone="amber"
         />
         <MetricCard
-          label="평균 근거 커버리지"
+          label="평균 근거 충족률"
           value={active.length ? coverage + "%" : "—"}
-          helper="진행 중 케이스 기준"
+          helper="진행 중인 업무 기준"
           icon={ShieldCheck}
           tone="green"
         />
         <MetricCard
           label="미해결 쟁점"
           value={String(findings)}
-          helper="진행 중 케이스 합계"
+          helper="진행 중인 업무 합계"
           icon={TimerReset}
           tone="violet"
         />
@@ -114,8 +114,8 @@ export default async function DashboardPage() {
         <article className="card">
           <div className="card-header">
             <div>
-              <h2>우선 처리 케이스</h2>
-              <p>현재 테넌트의 리스크 수준을 기준으로 정렬했습니다.</p>
+              <h2>우선 처리 업무</h2>
+              <p>현재 조직의 세무 리스크가 높은 순서로 정렬했습니다.</p>
             </div>
             <Link className="section-link" href="/cases">
               전체 보기 <ArrowRight size={13} />
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>거래처 / 세목</th>
+                  <th>고객사 · 세목</th>
                   <th>상태</th>
                   <th>리스크</th>
                   <th>진행률</th>
@@ -142,7 +142,7 @@ export default async function DashboardPage() {
                       >
                         <strong>{matter.client}</strong>
                         <span>
-                          {matter.taxType} / {matter.period}
+                          {matter.taxType} · {matter.period}
                         </span>
                       </Link>
                     </td>
@@ -169,7 +169,7 @@ export default async function DashboardPage() {
               </tbody>
             </table>
             {!priority.length ? (
-              <div className="empty-state">등록된 케이스가 없습니다.</div>
+              <div className="empty-state">등록된 세무 업무가 없습니다.</div>
             ) : null}
           </div>
         </article>
@@ -178,7 +178,7 @@ export default async function DashboardPage() {
           <div className="card-header">
             <div>
               <h2>검토 담당 현황</h2>
-              <p>검토자와 남은 쟁점을 케이스별로 확인합니다.</p>
+              <p>업무별 검토자와 미해결 쟁점을 확인합니다.</p>
             </div>
             <span className="status-pill status-info">{priority.length}건</span>
           </div>
@@ -189,7 +189,7 @@ export default async function DashboardPage() {
                 <div className="today-copy">
                   <strong>{matter.client}</strong>
                   <span>
-                    검토자 {matter.reviewer} / 미해결 {matter.openFindings}건
+                    검토자 {matter.reviewer} · 미해결 {matter.openFindings}건
                   </span>
                 </div>
                 <span
@@ -214,34 +214,35 @@ export default async function DashboardPage() {
         </div>
         <h2 className="ai-insight-title" id="ai-insight-title">
           {focus
-            ? focus.client + " 케이스에서 근거 기반 분석을 시작할 수 있습니다."
-            : "첫 세무 케이스를 만들고 근거 기반 분석을 시작하세요."}
+            ? focus.client + " 업무의 근거 기반 분석을 시작할 수 있습니다."
+            : "첫 세무 업무를 등록하고 근거 기반 분석을 시작하세요."}
         </h2>
         <p className="ai-insight-copy">
           문서를 검색한 뒤 인용 가능한 근거와 계산 결과를 분리해 제시합니다. AI
-          초안은 세무 검토자의 승인 전에는 확정 결과로 취급되지 않습니다.
+          초안은 세무 검토자가 승인하기 전까지 확정된 결론으로 취급되지
+          않습니다.
         </p>
         <div className="ai-insight-footer">
           <div className="source-stack" aria-label="AI 안전 통제">
             <span className="source-chip">검</span>
             <span className="source-chip">승</span>
-            <span className="source-label">근거 검증 / 사람 승인</span>
+            <span className="source-label">근거 검증 · 전문가 승인</span>
           </div>
           <Link
             className="button button-primary button-compact"
             href={focus ? "/assistant?matter=" + focus.id : "/cases/new"}
           >
-            {focus ? "분석 열기" : "케이스 만들기"} <ArrowRight size={14} />
+            {focus ? "분석 시작" : "업무 등록"} <ArrowRight size={14} />
           </Link>
         </div>
       </section>
 
       <section className="mini-grid" aria-label="현재 업무 요약">
         {[
-          [matters.length + "건", "현재 테넌트 전체 케이스"],
+          [matters.length + "건", "현재 조직의 전체 세무 업무"],
           [
             matters.filter((matter) => matter.risk === "HIGH").length + "건",
-            "고위험 케이스",
+            "고위험 세무 업무",
           ],
           [findings + "건", "미해결 쟁점"],
         ].map(([value, label], index) => (
@@ -264,7 +265,7 @@ export default async function DashboardPage() {
       </section>
 
       <div className="sr-only" aria-live="polite">
-        <CheckCircle2 /> 현재 워크스페이스의 업무 현황을 불러왔습니다.
+        <CheckCircle2 /> 현재 업무 공간의 현황을 불러왔습니다.
       </div>
     </>
   );

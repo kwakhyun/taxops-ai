@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const user = await getSessionUser();
   const matter = await findMatter(user, id);
-  return { title: matter?.client ?? "케이스" };
+  return { title: matter?.client ?? "세무 업무" };
 }
 
 export default async function CaseDetailPage({ params }: Props) {
@@ -63,7 +63,7 @@ export default async function CaseDetailPage({ params }: Props) {
   return (
     <>
       <Link className="back-link" href="/cases">
-        <ArrowLeft size={14} /> 케이스 목록
+        <ArrowLeft size={14} /> 세무 업무 목록
       </Link>
 
       <section className="case-hero">
@@ -106,7 +106,7 @@ export default async function CaseDetailPage({ params }: Props) {
         </div>
       </section>
 
-      <nav className="tabs case-tabs" aria-label="케이스 세부 메뉴">
+      <nav className="tabs case-tabs" aria-label="세무 업무 세부 메뉴">
         <Link className="tab tab-active" href={`/cases/${matter.id}`}>
           개요
         </Link>
@@ -117,7 +117,7 @@ export default async function CaseDetailPage({ params }: Props) {
           AI 분석 <span className="tab-count">{latestRun ? 1 : 0}</span>
         </Link>
         <Link className="tab" href="/reviews">
-          워크페이퍼
+          검토조서
         </Link>
         <Link className="tab" href="/audit">
           활동 로그
@@ -132,7 +132,7 @@ export default async function CaseDetailPage({ params }: Props) {
                 <div>
                   <span className="card-kicker">우선 검토 쟁점</span>
                   <h2>{workpaper.title}</h2>
-                  <p>저장된 AI 분석과 근거 스냅샷을 함께 표시합니다.</p>
+                  <p>저장된 AI 분석과 당시의 근거를 함께 표시합니다.</p>
                 </div>
                 {workpaper.amountKrw !== undefined ? (
                   <span className="finding-amount">
@@ -156,8 +156,8 @@ export default async function CaseDetailPage({ params }: Props) {
                   <div>
                     <strong>{workpaper.conclusion}</strong>
                     <p>
-                      아래 출처는 생성 시점의 원문 필드와 해시에 고정되며, 승인
-                      직전 현재 문서와 다시 대조됩니다.
+                      아래 근거는 분석 시점의 원문과 파일 해시에 연결되며, 승인
+                      직전에 현재 문서와 다시 대조됩니다.
                     </p>
                   </div>
                 </div>
@@ -188,7 +188,7 @@ export default async function CaseDetailPage({ params }: Props) {
                   <ShieldCheck size={14} /> 저장된 근거{" "}
                   {workpaper.evidence.length}건
                   {latestRun
-                    ? ` · 실행 근거 커버리지 ${latestRun.evidenceCoverage}%`
+                    ? ` · 근거 충족률 ${latestRun.evidenceCoverage}%`
                     : ""}
                 </span>
                 <Link className="section-link" href={assistantHref}>
@@ -202,7 +202,7 @@ export default async function CaseDetailPage({ params }: Props) {
                 <div>
                   <span className="card-kicker">근거 기반 분석</span>
                   <h2>분석을 시작할 준비가 필요합니다</h2>
-                  <p>이 케이스에는 아직 검증된 AI 분석 결과가 없습니다.</p>
+                  <p>이 업무에는 아직 검증된 AI 분석 결과가 없습니다.</p>
                 </div>
                 <span className="status-pill status-neutral">자료 대기</span>
               </div>
@@ -212,7 +212,7 @@ export default async function CaseDetailPage({ params }: Props) {
                     <Bot size={21} />
                   </span>
                   <h3>자료를 올린 뒤 AI 분석을 실행하세요.</h3>
-                  <p>검역과 인덱싱을 마친 자료만 검색 근거로 사용됩니다.</p>
+                  <p>보안 검사와 검색 등록을 마친 자료만 근거로 사용됩니다.</p>
                   <Link
                     className="button button-primary button-compact"
                     href={documentsHref}
@@ -227,8 +227,8 @@ export default async function CaseDetailPage({ params }: Props) {
           <article className="card document-list-card">
             <div className="card-header">
               <div>
-                <h2>케이스 자료</h2>
-                <p>보안 검역을 통과한 자료만 AI 검색에 사용됩니다.</p>
+                <h2>업무 자료</h2>
+                <p>보안 검사를 통과한 자료만 AI 검색 근거로 사용됩니다.</p>
               </div>
               <Link className="section-link" href={documentsHref}>
                 전체 보기 <ArrowRight size={13} />
@@ -253,7 +253,7 @@ export default async function CaseDetailPage({ params }: Props) {
                     <StatusPill status={document.status} />
                     <span className="document-chunks">
                       {document.chunks
-                        ? `${document.chunks.toLocaleString("ko-KR")} chunks`
+                        ? `검색 단위 ${document.chunks.toLocaleString("ko-KR")}개`
                         : "처리 중"}
                     </span>
                     <button
@@ -270,7 +270,7 @@ export default async function CaseDetailPage({ params }: Props) {
                 <div className="empty-state">
                   <div>
                     <h3>연결된 자료가 없습니다.</h3>
-                    <p>첫 자료를 업로드하면 검역 작업이 자동으로 시작됩니다.</p>
+                    <p>첫 자료를 등록하면 보안 검사가 자동으로 시작됩니다.</p>
                   </div>
                 </div>
               ) : null}
@@ -356,14 +356,14 @@ export default async function CaseDetailPage({ params }: Props) {
                   <strong>{formatWon(latestRun.estimatedCostKrw)}</strong>
                 </div>
                 <div>
-                  <span>근거 커버리지</span>
+                  <span>근거 충족률</span>
                   <strong>{latestRun.evidenceCoverage}%</strong>
                 </div>
               </div>
               <div className="run-meta">
                 <span>{latestRun.model}</span>
                 <span>{latestRun.promptVersion}</span>
-                <span>trace {latestRun.traceId}</span>
+                <span>추적 ID {latestRun.traceId}</span>
               </div>
             </article>
           ) : null}

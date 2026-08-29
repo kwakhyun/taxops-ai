@@ -12,8 +12,24 @@ import { PageHeading } from "@/components/page-heading";
 import { can } from "@/lib/auth/rbac";
 import { getSessionUser } from "@/lib/auth/session";
 import { getAuditIntegrity, listAuditEvents } from "@/lib/repository";
+import { auditActionLabel, auditOutcomeLabel } from "@/lib/ui/labels";
 
 export const metadata: Metadata = { title: "감사 로그" };
+
+function formatAuditTime(value: string) {
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp)
+    ? value
+    : new Date(timestamp).toLocaleString("ko-KR", {
+        timeZone: "Asia/Seoul",
+      });
+}
+
+function auditIpLabel(value: string) {
+  if (value === "system") return "시스템";
+  if (value === "not-recorded") return "미기록";
+  return value;
+}
 
 export default async function AuditPage() {
   const user = await getSessionUser();
@@ -25,17 +41,17 @@ export default async function AuditPage() {
   return (
     <>
       <PageHeading
-        eyebrow="변조 방지 감사 추적"
+        eyebrow="변경 방지 감사 추적"
         title="감사 로그"
-        description="케이스 생성, 파일 등록, AI 실행 수명주기, 근거 승인과 워크페이퍼 결정을 추가 전용 해시 체인으로 보존합니다. 검색과 도구 호출의 해시는 에이전트 계보 테이블에 별도로 기록합니다."
+        description="세무 업무 등록, 자료 처리, AI 실행 전 과정, 검색 근거 승인과 검토조서 결정을 수정하거나 삭제할 수 없는 해시 체인으로 보존합니다. 검색과 도구 실행 이력은 별도의 AI 실행 이력에 기록합니다."
         actions={
           <button
             className="button button-secondary"
             type="button"
             disabled
-            title="내보내기 저장소 연동 후 사용할 수 있습니다."
+            title="저장소 연동이 완료되면 사용할 수 있습니다."
           >
-            <Download size={15} /> 증적 내보내기
+            <Download size={15} /> 감사 자료 내보내기
           </button>
         }
       />
@@ -51,8 +67,9 @@ export default async function AuditPage() {
               {integrity.valid ? "해시 체인 정상" : "해시 체인 검증 필요"}
             </strong>
             <p>
-              전체 체인 {integrity.count}개 이벤트 /{" "}
-              {new Date(integrity.verifiedAt).toLocaleTimeString("ko-KR")} 검증
+              이벤트 {integrity.count}건 ·{" "}
+              {new Date(integrity.verifiedAt).toLocaleTimeString("ko-KR")}에
+              검증
             </p>
           </div>
           <span
@@ -70,8 +87,8 @@ export default async function AuditPage() {
           </span>
           <div>
             <span className="card-kicker">개인정보 보호</span>
-            <strong>허용 목록 기반 메타데이터</strong>
-            <p>패턴 기반 PII redaction과 비정형 값 제거 적용</p>
+            <strong>기록 항목 최소화</strong>
+            <p>허용된 항목만 기록하고 개인정보와 비정형 값은 제거합니다.</p>
           </div>
           <span className="status-pill status-success">정상</span>
         </article>
@@ -81,7 +98,7 @@ export default async function AuditPage() {
         <div className="cases-toolbar">
           <label className="field-search">
             <Search size={16} />
-            <input placeholder="검색 기능 준비 중" disabled />
+            <input placeholder="검색 기능은 준비 중입니다." disabled />
           </label>
           <div className="filter-group">
             <button
@@ -95,7 +112,7 @@ export default async function AuditPage() {
               성공
             </button>
             <button className="filter-chip" type="button" disabled>
-              거부
+              차단
             </button>
             <button className="filter-chip" type="button" disabled>
               실패
@@ -120,7 +137,7 @@ export default async function AuditPage() {
             <tbody>
               {auditEvents.map((event) => (
                 <tr key={event.id}>
-                  <td>{event.occurredAt}</td>
+                  <td>{formatAuditTime(event.occurredAt)}</td>
                   <td>
                     <span className="audit-actor">
                       <span>{event.actor.slice(0, 1)}</span>
@@ -128,7 +145,9 @@ export default async function AuditPage() {
                     </span>
                   </td>
                   <td>
-                    <code className="action-code">{event.action}</code>
+                    <code className="action-code">
+                      {auditActionLabel(event.action)}
+                    </code>
                   </td>
                   <td>{event.target}</td>
                   <td>
@@ -140,13 +159,13 @@ export default async function AuditPage() {
                       ) : (
                         <ShieldCheck size={11} />
                       )}
-                      {event.outcome}
+                      {auditOutcomeLabel(event.outcome)}
                     </span>
                   </td>
                   <td>
                     <code className="trace-id">{event.traceId}</code>
                   </td>
-                  <td>{event.ipMasked}</td>
+                  <td>{auditIpLabel(event.ipMasked)}</td>
                   <td>
                     <code className="hash-code">
                       {event.prevHash} → {event.hash}
@@ -160,8 +179,8 @@ export default async function AuditPage() {
         <div className="audit-footer">
           <ShieldCheck size={13} />
           <span>
-            UPDATE와 DELETE는 데이터베이스 trigger로 차단됩니다. 감사
-            메타데이터는 allowlist와 PII redaction을 통과합니다.
+            변경 및 삭제 작업은 데이터베이스 트리거로 차단됩니다. 감사 기록에는
+            허용 목록과 개인정보 비식별 처리가 적용됩니다.
           </span>
         </div>
       </section>

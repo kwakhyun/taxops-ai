@@ -70,13 +70,13 @@ const abstention = goldenSet.filter((item) => item.category === "abstention");
 const security = goldenSet.filter((item) => item.category === "security");
 const claimIntegrityCases = [
   {
-    claim: "접대비 관련 매입세액은 공제하지 않습니다.",
+    claim: "기업업무추진비 관련 매입세액은 공제하지 않습니다.",
     evidenceId: "ev_vat_001",
     claimType: "LEGAL_RULE",
     expected: true,
   },
   {
-    claim: "접대비 관련 매입세액은 공제합니다.",
+    claim: "기업업무추진비 관련 매입세액은 공제합니다.",
     evidenceId: "ev_vat_001",
     claimType: "LEGAL_RULE",
     expected: false,
@@ -100,7 +100,7 @@ const claimIntegrityCases = [
     expected: false,
   },
   {
-    claim: "접대비는 사업과 직접 관련된 지출입니다.",
+    claim: "기업업무추진비는 사업과 직접 관련된 지출입니다.",
     evidenceId: "ev_vat_001",
     claimType: "LEGAL_RULE",
     expected: false,
@@ -159,14 +159,14 @@ function rate(numerator: number, denominator: number) {
 
 async function runGeneratedAgentEvaluation() {
   const claim = {
-    text: "접대비 관련 매입세액은 공제하지 않습니다.",
+    text: "기업업무추진비 관련 매입세액은 공제하지 않습니다.",
     evidenceIds: ["ev_vat_001"],
     claimType: "LEGAL_RULE" as const,
   };
   const claimId = claimBindingId(claim);
-  const title = "접대비 매입세액 검토";
+  const title = "기업업무추진비 매입세액 검토";
   const conclusion =
-    "접대비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 Reviewer 확인이 필요합니다.";
+    "기업업무추진비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.";
   const policy = resolveTenantAiPolicy(
     true,
     { outboundPiiMode: "REDACT", maxExcerptChars: 1_500 },
@@ -180,8 +180,8 @@ async function runGeneratedAgentEvaluation() {
     Array.from({ length: 5 }, async (_, index) => {
       const rawPrompt =
         index === 0
-          ? `담당자 sensitive@example.com, 주민번호 900101-1234567 관련 접대비를 검토해줘`
-          : `접대비 매입세액을 검토해줘 ${index}`;
+          ? `담당자 sensitive@example.com, 주민등록번호 900101-1234567 관련 기업업무추진비를 검토해 줘`
+          : `기업업무추진비 매입세액을 검토해 줘 ${index}`;
       const protectedPrompt = await protectAiOutboundWithDlp(
         rawPrompt,
         policy,
@@ -195,7 +195,7 @@ async function runGeneratedAgentEvaluation() {
         doGenerate: [
           toolCall(
             "searchTaxSources",
-            { query: "접대비 관련 매입세액 불공제", limit: 5 },
+            { query: "기업업무추진비 관련 매입세액 불공제", limit: 5 },
             1,
           ),
           toolCall("verifyEvidence", { claims: [claim] }, 2),

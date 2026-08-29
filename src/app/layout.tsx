@@ -10,10 +10,11 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: {
-    default: "TaxOps AI · 세무 업무 워크스페이스",
+    default: "TaxOps AI · 세무 업무 플랫폼",
     template: "%s · TaxOps AI",
   },
-  description: "근거와 승인 흐름을 중심으로 설계된 AI-native 세무 업무 플랫폼",
+  description:
+    "근거 검증과 승인 절차를 중심으로 설계된 AI 기반 세무 업무 플랫폼",
 };
 
 export default async function RootLayout({

@@ -35,11 +35,11 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
       <div className="cases-toolbar">
         <label className="field-search">
           <Search size={16} aria-hidden="true" />
-          <span className="sr-only">케이스 검색</span>
+          <span className="sr-only">세무 업무 검색</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="거래처, 세목, 기간 검색"
+            placeholder="고객사, 세목, 기간 검색"
           />
         </label>
         <div className="filter-group" aria-label="리스크 필터">
@@ -58,7 +58,7 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
             </button>
           ))}
         </div>
-        <span className="result-count">{filtered.length}개 케이스</span>
+        <span className="result-count">세무 업무 {filtered.length}건</span>
       </div>
 
       {filtered.length ? (
@@ -66,11 +66,11 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
           <table className="data-table cases-table">
             <thead>
               <tr>
-                <th>케이스</th>
-                <th>담당 / 검토</th>
+                <th>세무 업무</th>
+                <th>담당자 · 검토자</th>
                 <th>상태</th>
                 <th>리스크</th>
-                <th>근거 커버리지</th>
+                <th>근거 충족률</th>
                 <th>마감일</th>
                 <th aria-label="열기" />
               </tr>
@@ -125,7 +125,7 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
                     <Link
                       className="row-open"
                       href={`/cases/${matter.id}`}
-                      aria-label={`${matter.client} 케이스 열기`}
+                      aria-label={`${matter.client} 세무 업무 열기`}
                     >
                       <ChevronRight size={16} />
                     </Link>
@@ -141,7 +141,7 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
             <span className="empty-state-icon">
               <Search size={21} />
             </span>
-            <h3>조건에 맞는 케이스가 없습니다.</h3>
+            <h3>조건에 맞는 세무 업무가 없습니다.</h3>
             <p>검색어나 리스크 필터를 변경해 주세요.</p>
           </div>
         </div>

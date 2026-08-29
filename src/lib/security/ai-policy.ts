@@ -87,7 +87,7 @@ export function protectAiOutbound(
   if (!policy.enabled) {
     throw new AiPolicyError(
       "AI_DISABLED_FOR_TENANT",
-      "이 워크스페이스에서는 외부 AI 처리가 비활성화되어 있습니다.",
+      "이 조직에서는 외부 AI 처리가 비활성화되어 있습니다.",
     );
   }
   if (
@@ -96,7 +96,7 @@ export function protectAiOutbound(
   ) {
     throw new AiPolicyError(
       "AI_DATA_REGION_NOT_ALLOWED",
-      "테넌트 정책이 허용한 데이터 처리 지역과 AI 제공자 지역이 일치하지 않습니다.",
+      "조직 정책에서 허용한 데이터 처리 지역과 AI 제공자의 처리 지역이 일치하지 않습니다.",
     );
   }
   if (policy.outboundPiiMode === "BLOCK" && containsPii(value)) {
@@ -131,14 +131,14 @@ export async function protectAiOutboundBatch(
   if (!endpoint || !token || !dlpRegion) {
     throw new AiPolicyError(
       "PII_DLP_NOT_CONFIGURED",
-      "프로덕션 민감정보 검사 서비스가 구성되지 않았습니다.",
+      "운영 환경의 민감정보 검사 서비스가 구성되지 않았습니다.",
       503,
     );
   }
   if (!policy.allowedProviderRegions.includes(dlpRegion)) {
     throw new AiPolicyError(
       "PII_DLP_REGION_DENIED",
-      "민감정보 검사 서비스의 처리 리전이 테넌트 정책과 일치하지 않습니다.",
+      "민감정보 검사 서비스의 처리 지역이 조직 정책과 일치하지 않습니다.",
     );
   }
   let url: URL;

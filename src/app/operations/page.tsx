@@ -18,7 +18,7 @@ import { PageHeading } from "@/components/page-heading";
 import { can } from "@/lib/auth/rbac";
 import { getSessionUser } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "운영 관제" };
+export const metadata: Metadata = { title: "운영 현황" };
 
 const traces = [
   {
@@ -65,9 +65,9 @@ export default async function OperationsPage() {
   return (
     <>
       <PageHeading
-        eyebrow="프로덕션 운영 상태"
-        title="운영 관제"
-        description="아래 수치는 운영 설계를 설명하는 시연 스냅샷입니다. 실제 배포에서는 HTTP 요청부터 인증, 검색, LLM, 도구, 비동기 작업까지 하나의 trace로 연결하며 원문과 PII는 기록하지 않습니다."
+        eyebrow="운영 환경 상태"
+        title="운영 현황"
+        description="아래 수치는 운영 구성을 설명하기 위한 예시입니다. 실제 환경에서는 HTTP 요청, 인증, 검색, LLM 호출, 도구 실행, 비동기 작업을 하나의 추적 ID로 연결하며 원문과 개인정보는 로그에 저장하지 않습니다."
         actions={
           <span className="live-indicator">
             <span /> 시연 데이터
@@ -77,18 +77,18 @@ export default async function OperationsPage() {
 
       <section className="metric-grid">
         <MetricCard
-          label="일반 API p95"
+          label="일반 API 응답 시간(p95)"
           value="184ms"
-          helper="SLO 500ms 이내"
+          helper="서비스 목표 500ms 이하"
           trend="12%"
           trendDirection="down"
           icon={Gauge}
           tone="green"
         />
         <MetricCard
-          label="AI 응답 p95"
+          label="AI 응답 시간(p95)"
           value="11.8s"
-          helper="TTFT p95 2.4초"
+          helper="첫 토큰 응답 시간(p95) 2.4초"
           trend="4%"
           trendDirection="down"
           icon={Bot}
@@ -97,7 +97,7 @@ export default async function OperationsPage() {
         <MetricCard
           label="최대 작업 대기 시간"
           value="48s"
-          helper="SLO 5분 이내"
+          helper="서비스 목표 5분 이하"
           trend="8s"
           trendDirection="down"
           icon={TimerReset}
@@ -106,7 +106,7 @@ export default async function OperationsPage() {
         <MetricCard
           label="오류율"
           value="0.12%"
-          helper="최근 24시간 8,420 요청"
+          helper="최근 24시간 요청 8,420건"
           trend="0.04%"
           trendDirection="down"
           icon={Activity}
@@ -152,7 +152,7 @@ export default async function OperationsPage() {
           <div className="card-header">
             <div>
               <h2>서비스 상태</h2>
-              <p>가동 준비 상태와 외부 의존성</p>
+              <p>서비스 가동 상태와 외부 연동</p>
             </div>
             <CheckCircle2 size={18} className="service-ok" />
           </div>
@@ -162,8 +162,8 @@ export default async function OperationsPage() {
                 <ServerCog size={16} />
               </span>
               <span>
-                <strong>Next.js web</strong>
-                <small>3 replicas · v0.1.0</small>
+                <strong>Next.js 웹</strong>
+                <small>인스턴스 3개 · v0.1.0</small>
               </span>
               <em>정상</em>
             </div>
@@ -173,7 +173,7 @@ export default async function OperationsPage() {
               </span>
               <span>
                 <strong>PostgreSQL + pgvector</strong>
-                <small>연결 12 / 100</small>
+                <small>연결 12/100</small>
               </span>
               <em>정상</em>
             </div>
@@ -193,7 +193,7 @@ export default async function OperationsPage() {
               </span>
               <span>
                 <strong>AI Gateway</strong>
-                <small>회로 차단기 정상</small>
+                <small>서킷 브레이커 정상</small>
               </span>
               <em>정상</em>
             </div>
@@ -206,9 +206,9 @@ export default async function OperationsPage() {
           <div className="card-header">
             <div>
               <h2>비동기 작업</h2>
-              <p>DB 임대 잠금, 재시도, 실패 작업 보관</p>
+              <p>작업 잠금, 자동 재시도, 최종 실패 작업 보관</p>
             </div>
-            <span className="status-pill status-success">Worker 2/2</span>
+            <span className="status-pill status-success">워커 2/2</span>
           </div>
           <div className="queue-lanes">
             <div>
@@ -233,7 +233,7 @@ export default async function OperationsPage() {
               </div>
             </div>
             <div>
-              <span>DLQ</span>
+              <span>최종 실패</span>
               <strong>0</strong>
               <div className="queue-track">
                 <span style={{ width: "0%" }} />
@@ -243,7 +243,7 @@ export default async function OperationsPage() {
           <div className="queue-note">
             <Clock3 size={14} />
             <span>
-              가장 오래된 작업은 48초 전 등록됐습니다. 작업 임대 신호는
+              가장 오래된 작업은 48초 전에 등록됐습니다. 작업 잠금 상태는
               정상입니다.
             </span>
           </div>
@@ -253,7 +253,7 @@ export default async function OperationsPage() {
           <div className="card-header">
             <div>
               <h2>AI 비용 예산</h2>
-              <p>8월 누적 · 테넌트 한도</p>
+              <p>8월 누적 · 조직 한도</p>
             </div>
             <span className="budget-amount">₩184,200</span>
           </div>
@@ -286,14 +286,14 @@ export default async function OperationsPage() {
       <section className="card trace-card">
         <div className="card-header">
           <div>
-            <h2>최근 실행 추적</h2>
+            <h2>최근 요청 추적</h2>
             <p>본문 없이 식별자, 지연, 비용, 결과만 저장합니다.</p>
           </div>
           <button
             className="button button-secondary button-compact"
             type="button"
           >
-            추적 탐색기
+            추적 상세 보기
           </button>
         </div>
         <div className="table-wrap">
@@ -335,7 +335,7 @@ export default async function OperationsPage() {
         <div className="observability-note">
           <TriangleAlert size={13} />
           <span>
-            개인정보 탐지 검사: 최근 24시간 로그와 실행 추적에서 노출 0건
+            개인정보 노출 점검: 최근 24시간 로그와 실행 추적에서 노출 0건
           </span>
         </div>
       </section>

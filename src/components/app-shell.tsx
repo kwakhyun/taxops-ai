@@ -43,26 +43,26 @@ const navItems: NavItem[] = [
   { href: "/", label: "업무 현황", icon: LayoutDashboard },
   {
     href: "/cases",
-    label: "세무 케이스",
+    label: "세무 업무",
     icon: BriefcaseBusiness,
     permission: "case:read",
   },
   {
     href: "/assistant",
-    label: "AI 워크벤치",
+    label: "AI 분석",
     icon: Bot,
     badge: "Beta",
     permission: "assistant:run",
   },
   {
     href: "/documents",
-    label: "문서 보관함",
+    label: "자료 관리",
     icon: Files,
     permission: "document:read",
   },
   {
     href: "/reviews",
-    label: "검토·승인",
+    label: "검토 및 승인",
     icon: BadgeCheck,
     permission: "workpaper:review",
   },
@@ -71,13 +71,13 @@ const navItems: NavItem[] = [
 const operationItems: NavItem[] = [
   {
     href: "/operations",
-    label: "운영 관제",
+    label: "운영 현황",
     icon: Activity,
     permission: "audit:read",
   },
   {
     href: "/evaluations",
-    label: "AI 평가",
+    label: "AI 품질 평가",
     icon: ShieldCheck,
     permission: "audit:read",
   },
@@ -92,7 +92,7 @@ const operationItems: NavItem[] = [
 const roleLabel: Record<Role, string> = {
   ANALYST: "세무 실무자",
   REVIEWER: "세무 검토자",
-  ADMIN: "워크스페이스 관리자",
+  ADMIN: "업무 공간 관리자",
 };
 
 function isActive(pathname: string, href: string) {
@@ -247,7 +247,7 @@ export function AppShell({
             items={navItems}
             pathname={pathname}
             onNavigate={() => setMobileOpen(false)}
-            label="워크스페이스 메뉴"
+            label="세무 업무 메뉴"
             permissions={permissions}
           />
         </div>
@@ -270,8 +270,8 @@ export function AppShell({
             <ShieldCheck size={18} />
           </span>
           <div>
-            <strong>보안 통제 활성</strong>
-            <p>권한, 근거, 감사 추적이 적용 중입니다.</p>
+            <strong>보안 통제 적용 중</strong>
+            <p>접근 권한, 근거 검증, 감사 추적이 적용됩니다.</p>
           </div>
         </div>
 
@@ -320,22 +320,22 @@ export function AppShell({
           <Link
             className="command-search"
             href="/cases"
-            aria-label="케이스 검색 열기"
+            aria-label="세무 업무 검색 열기"
           >
             <Search size={17} />
-            <span>케이스, 문서, 거래처 검색</span>
+            <span>세무 업무, 자료, 고객사 검색</span>
             <kbd>⌘ K</kbd>
           </Link>
 
           <div className="topbar-actions">
             <span className="environment-pill">
-              <span /> 보안 통제 활성
+              <span /> 보안 통제 적용 중
             </span>
             <Link
               href="/cases/new"
               className="button button-primary button-compact"
             >
-              <Plus size={16} /> 새 케이스
+              <Plus size={16} /> 새 업무
             </Link>
           </div>
         </header>
@@ -343,7 +343,7 @@ export function AppShell({
         {portfolioDemo ? (
           <div className="portfolio-demo-banner" role="status">
             <ShieldCheck size={15} aria-hidden="true" />
-            <strong>포트폴리오 데모</strong>
+            <strong>시연 모드</strong>
             <span>
               예시 데이터만 사용하며 입력 내용은 영구 저장되지 않습니다.
             </span>

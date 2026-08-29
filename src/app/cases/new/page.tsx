@@ -5,7 +5,7 @@ import { can } from "@/lib/auth/rbac";
 import { getSessionUser } from "@/lib/auth/session";
 import { listReviewers } from "@/lib/repository";
 
-export const metadata: Metadata = { title: "새 케이스" };
+export const metadata: Metadata = { title: "새 세무 업무" };
 
 export default async function NewCasePage() {
   const user = await getSessionUser();

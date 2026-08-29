@@ -4,6 +4,7 @@ import { Eye, LoaderCircle, ShieldCheck, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { EvidenceReviewPreview } from "@/lib/domain/types";
+import { jurisdictionLabel, sourceTypeLabel } from "@/lib/ui/labels";
 
 interface ApiPayload {
   data?: EvidenceReviewPreview;
@@ -81,7 +82,7 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
         className="button button-secondary button-compact evidence-review-button"
         onClick={() => void inspect()}
       >
-        <Eye size={14} aria-hidden="true" /> 근거 검토
+        <Eye size={14} aria-hidden="true" /> 검색 근거 검토
       </button>
       {open ? (
         <div className="evidence-modal-backdrop" role="presentation">
@@ -93,9 +94,9 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
           >
             <header className="evidence-modal-header">
               <div>
-                <span className="eyebrow">Checksum-bound review</span>
+                <span className="eyebrow">원본 무결성 확인</span>
                 <h2 id={`evidence-review-title-${documentId}`}>
-                  AI 근거 적합성 검토
+                  AI 검색 근거 검토
                 </h2>
               </div>
               <button
@@ -112,7 +113,7 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
 
             {loading ? (
               <div className="evidence-modal-loading" role="status">
-                <LoaderCircle className="spin" size={20} /> 추출 근거를 불러오는
+                <LoaderCircle className="spin" size={20} /> 추출 내용을 불러오는
                 중입니다.
               </div>
             ) : preview ? (
@@ -123,16 +124,16 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
                     <strong>{preview.name}</strong>
                   </div>
                   <div>
-                    <span>업로더 / 버전</span>
+                    <span>등록자 · 버전</span>
                     <strong>
-                      {preview.uploadedBy} / v{preview.version}
+                      {preview.uploadedBy} · v{preview.version}
                     </strong>
                   </div>
                   {preview.sourcePublisher ? (
                     <div>
-                      <span>공식 발행기관 / 취득일</span>
+                      <span>공식 발행기관 · 수집일</span>
                       <strong>
-                        {preview.sourcePublisher} /{" "}
+                        {preview.sourcePublisher} ·{" "}
                         {preview.acquiredAt?.slice(0, 10) ?? "—"}
                       </strong>
                     </div>
@@ -150,18 +151,18 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
                     </div>
                   ) : null}
                   <div className="evidence-checksum-row">
-                    <span>승인에 고정되는 SHA-256</span>
+                    <span>원본 파일 해시(SHA-256)</span>
                     <code>{preview.checksumSha256}</code>
                   </div>
                   <div className="evidence-checksum-row">
-                    <span>현재 추출본 manifest SHA-256</span>
+                    <span>추출 내용 해시(SHA-256)</span>
                     <code>{preview.manifestSha256}</code>
                   </div>
                 </div>
                 <p className="evidence-review-notice">
-                  아래에는 현재 버전의 추출 내용을 전부 표시합니다. 승인 시 원본
-                  체크섬과 전체 청크 manifest가 함께 검증되며, 변경된 문서는
-                  승인되지 않습니다.
+                  현재 버전에서 추출한 내용을 모두 표시합니다. 승인 시 시스템이
+                  원본 파일과 추출 내용의 해시를 다시 대조합니다. 승인 후 변경된
+                  자료는 검색 근거에서 자동으로 제외됩니다.
                 </p>
                 <div className="evidence-preview-list">
                   {preview.previewChunks.map((chunk) => (
@@ -170,16 +171,12 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
                         <strong>{chunk.section ?? "구간"}</strong>
                         <span>
                           {chunk.page ? `${chunk.page}쪽 · ` : ""}
-                          {chunk.contentHash.slice(0, 12)}
+                          내용 해시 {chunk.contentHash.slice(0, 12)}…
                         </span>
                       </header>
                       <small className="evidence-temporal-scope">
-                        {chunk.sourceType === "BUSINESS_RECORD"
-                          ? "업무 증빙"
-                          : chunk.sourceType === "TAX_AUTHORITY"
-                            ? "세법·공식 자료"
-                            : "내부 정책"}
-                        {` · ${chunk.jurisdiction}`}
+                        {sourceTypeLabel(chunk.sourceType)}
+                        {` · ${jurisdictionLabel(chunk.jurisdiction)}`}
                         {chunk.effectiveFrom
                           ? ` · ${chunk.effectiveFrom.slice(0, 10)}부터`
                           : ""}
@@ -192,7 +189,7 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
                   ))}
                 </div>
                 <small>
-                  전체 {preview.chunkCount.toLocaleString("ko-KR")}개 청크를
+                  검색 단위 {preview.chunkCount.toLocaleString("ko-KR")}개를
                   모두 표시합니다.
                 </small>
               </>
@@ -215,7 +212,7 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
                 ) : (
                   <X size={15} />
                 )}
-                근거 제외
+                사용 제외
               </button>
               <button
                 type="button"
@@ -228,7 +225,7 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
                 ) : (
                   <ShieldCheck size={15} />
                 )}
-                AI 근거로 승인
+                검색 근거로 승인
               </button>
             </footer>
           </section>

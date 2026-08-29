@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         {
           error: {
             code: "LENGTH_REQUIRED",
-            message: "업로드 요청에 Content-Length가 필요합니다.",
+            message: "업로드 파일의 크기 정보를 확인할 수 없습니다.",
           },
           meta: { requestId },
         },
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         {
           error: {
             code: "PAYLOAD_TOO_LARGE",
-            message: "업로드 요청은 16MB를 넘을 수 없습니다.",
+            message: "업로드 파일은 16 MB를 넘을 수 없습니다.",
           },
           meta: { requestId },
         },
@@ -83,7 +83,10 @@ export async function POST(request: Request) {
     if (!(await findMatter(user, metadata.matterId))) {
       return Response.json(
         {
-          error: { code: "NOT_FOUND", message: "케이스를 찾을 수 없습니다." },
+          error: {
+            code: "NOT_FOUND",
+            message: "세무 업무를 찾을 수 없습니다.",
+          },
           meta: { requestId },
         },
         { status: 404, headers: { "x-request-id": requestId } },

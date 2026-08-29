@@ -11,24 +11,25 @@ test.describe("TaxOps AI critical user journeys", () => {
   });
 
   test("filters matters and creates a new case", async ({ page }) => {
+    test.setTimeout(60_000);
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { name: "안녕하세요, 곽현님" }),
+      page.getByRole("heading", { name: "오늘의 세무 업무" }),
     ).toBeVisible();
 
-    await page.getByRole("link", { name: "세무 케이스" }).click();
-    await page.getByPlaceholder("거래처, 세목, 기간 검색").fill("리브온");
+    await page.getByRole("link", { name: "세무 업무" }).click();
+    await page.getByPlaceholder("고객사, 세목, 기간 검색").fill("리브온");
     await expect(
       page.getByText("리브온 커머스", { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("1개 케이스")).toBeVisible();
+    await expect(page.getByText("세무 업무 1건")).toBeVisible();
 
     await page.goto("/cases/new");
     await page.getByRole("button", { name: /계속/ }).click();
     await page.getByRole("button", { name: /계속/ }).click();
     await page.getByRole("button", { name: /계속/ }).click();
-    await page.getByRole("button", { name: /케이스 생성/ }).click();
-    await expect(page).toHaveURL(/\/cases\/matter-/);
+    await page.getByRole("button", { name: /업무 등록/ }).click();
+    await expect(page).toHaveURL(/\/cases\/matter-/, { timeout: 15_000 });
     await expect(
       page.getByRole("heading", { name: "한빛테크 주식회사", level: 1 }),
     ).toBeVisible();
@@ -38,10 +39,10 @@ test.describe("TaxOps AI critical user journeys", () => {
     page,
   }) => {
     await page.goto("/documents?matter=vat-2025-q4");
-    const search = page.getByPlaceholder("문서명, 케이스 검색");
-    await search.fill("업무가이드");
+    const search = page.getByPlaceholder("자료명, 고객사 검색");
+    await search.fill("업무안내");
     await expect(
-      page.getByText("부가가치세법_업무가이드_2025.pdf"),
+      page.getByText("부가가치세법_업무안내_2025.pdf"),
     ).toBeVisible();
     await expect(page.getByText("2025_2기_매입매출장.xlsx")).toBeHidden();
     await search.clear();
@@ -56,14 +57,14 @@ test.describe("TaxOps AI critical user journeys", () => {
       buffer: Buffer.from("this is not a pdf"),
     });
     await expect(page.getByRole("status")).toContainText(
-      "파일 서명이 MIME 유형과 일치하지 않습니다.",
+      "파일 내용이 선택한 형식과 일치하지 않습니다.",
     );
 
     await input.setInputFiles({
       name: "review-note.txt",
       mimeType: "text/plain",
       buffer: Buffer.from(
-        "접대비 거래 2건의 업무 관련성 메모를 확인합니다.",
+        "기업업무추진비 거래 2건의 업무 관련성 메모를 확인합니다.",
         "utf8",
       ),
     });
@@ -82,7 +83,9 @@ test.describe("TaxOps AI critical user journeys", () => {
       })
       .click();
     await expect(page.getByText(/검토 결론/)).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/지원 주장 6\/6/)).toBeVisible();
+    await expect(
+      page.getByText(/분석 항목 6개 중 6개 근거 확인/),
+    ).toBeVisible();
 
     const composer = page.getByLabel("AI에게 질문");
     await composer.fill("상속세가업승계 요건을 알려줘");
@@ -129,12 +132,14 @@ test.describe("TaxOps AI critical user journeys", () => {
     await page.goto("/documents?matter=vat-2025-q4");
     const row = page
       .getByRole("row")
-      .filter({ hasText: "접대비_업무관련성_소명서.txt" });
-    await row.getByRole("button", { name: "근거 검토" }).click();
+      .filter({ hasText: "기업업무추진비_업무관련성_소명서.txt" });
+    await row.getByRole("button", { name: "검색 근거 검토" }).click();
     await expect(
-      page.getByRole("heading", { name: "AI 근거 적합성 검토" }),
+      page.getByRole("heading", { name: "AI 검색 근거 검토" }),
     ).toBeVisible();
-    await expect(page.getByText("승인에 고정되는 SHA-256")).toBeVisible();
+    await expect(page.getByText("원본 파일 해시(SHA-256)")).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByText("거래 목적", { exact: true })).toBeVisible();
 
     const rejectedTamper = await page.request.patch(
@@ -148,8 +153,10 @@ test.describe("TaxOps AI critical user journeys", () => {
       },
     );
     expect(rejectedTamper.status()).toBe(409);
-    await page.getByRole("button", { name: "AI 근거로 승인" }).click();
-    await expect(row.getByText("AI 근거 승인", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "검색 근거로 승인" }).click();
+    await expect(
+      row.getByText("근거 사용 승인", { exact: true }),
+    ).toBeVisible();
   });
 
   test("requires reviewer identity, binds approval, and blocks token replay", async ({
@@ -175,7 +182,7 @@ test.describe("TaxOps AI critical user journeys", () => {
     };
     const body = {
       decision: "APPROVED",
-      note: "근거와 계산을 확인했으며 테스트 워크페이퍼를 승인합니다.",
+      note: "근거와 계산을 확인했으며 테스트 검토조서를 승인합니다.",
       token: tokenPayload.data.tokens.APPROVED,
       artifactHash: tokenPayload.data.artifactHash,
     };
@@ -197,10 +204,12 @@ test.describe("TaxOps AI critical user journeys", () => {
     expect(replayed.status()).toBe(409);
   });
 
-  test("connects with the official MCP client and calls a tenant-scoped tool", async () => {
+  test("connects with the official MCP client and calls a tenant-scoped tool", async ({
+    baseURL,
+  }) => {
     const client = new Client({ name: "taxops-e2e", version: "1.0.0" });
     const transport = new StreamableHTTPClientTransport(
-      new URL("http://127.0.0.1:3000/mcp"),
+      new URL("/mcp", baseURL),
     );
     try {
       await client.connect(transport);

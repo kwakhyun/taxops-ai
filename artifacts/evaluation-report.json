@@ -2,7 +2,7 @@
   "schemaVersion": "2.0",
   "generatedAt": "2026-08-28T22:18:42.783Z",
   "promptVersion": "tax-memo.v1.3.0",
-  "promptHash": "eef395686d730a3148f8d16250d7dca901420aa9dfb9d4af7671c671d592c323",
+  "promptHash": "1a82dac940abe28eebfdb43cfe17bf611d4fb06e56a86baed77a76331bd90d9f",
   "retrieverVersion": "hybrid-rag.v1.2.0",
   "datasetSize": 45,
   "passedCases": 45,
@@ -59,7 +59,7 @@
     {
       "id": "RET-002",
       "category": "retrieval",
-      "query": "접대비 관련 매입세액 불공제",
+      "query": "기업업무추진비 관련 매입세액 불공제",
       "expectedEvidenceId": "ev_vat_001",
       "retrievedIds": [
         "ev_vat_001",
@@ -82,7 +82,8 @@
       "expectedEvidenceId": "ev_vat_001",
       "retrievedIds": [
         "ev_vat_001",
-        "ev_return_007"
+        "ev_return_007",
+        "ev_ledger_019"
       ],
       "pass": true,
       "controls": {
@@ -131,7 +132,7 @@
     {
       "id": "RET-006",
       "category": "retrieval",
-      "query": "접대비 매입세액 공제 여부",
+      "query": "기업업무추진비 매입세액 공제 여부",
       "expectedEvidenceId": "ev_vat_001",
       "retrievedIds": [
         "ev_vat_001",
@@ -150,7 +151,7 @@
     {
       "id": "RET-007",
       "category": "retrieval",
-      "query": "접대비 거래처 업무 관련성 메모",
+      "query": "기업업무추진비 거래의 업무 관련성 메모",
       "expectedEvidenceId": "ev_ledger_019",
       "retrievedIds": [
         "ev_ledger_019",
@@ -203,7 +204,7 @@
     {
       "id": "RET-010",
       "category": "retrieval",
-      "query": "계정 812 접대비",
+      "query": "계정 812 기업업무추진비",
       "expectedEvidenceId": "ev_ledger_019",
       "retrievedIds": [
         "ev_ledger_019",
@@ -238,7 +239,7 @@
     {
       "id": "RET-012",
       "category": "retrieval",
-      "query": "원장 접대비 부가세 1,842,000원",
+      "query": "원장 기업업무추진비 부가가치세액 1,842,000원",
       "expectedEvidenceId": "ev_ledger_019",
       "retrievedIds": [
         "ev_ledger_019",
@@ -297,7 +298,8 @@
       "expectedEvidenceId": "ev_return_007",
       "retrievedIds": [
         "ev_return_007",
-        "ev_vat_001"
+        "ev_vat_001",
+        "ev_ledger_019"
       ],
       "pass": true,
       "controls": {
@@ -365,7 +367,7 @@
     {
       "id": "ABS-001",
       "category": "abstention",
-      "query": "외국납부세액공제한도 계산",
+      "query": "외국납부세액공제 한도 계산",
       "retrievedIds": [],
       "pass": true,
       "controls": {
@@ -379,7 +381,7 @@
     {
       "id": "ABS-002",
       "category": "abstention",
-      "query": "근로소득연말정산 의료비공제",
+      "query": "근로소득 연말정산 의료비 세액공제",
       "retrievedIds": [],
       "pass": true,
       "controls": {

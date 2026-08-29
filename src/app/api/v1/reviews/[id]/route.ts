@@ -62,7 +62,7 @@ export async function GET(
         {
           error: {
             code: "ARTIFACT_CHANGED",
-            message: "워크페이퍼가 변경되어 새 승인 요청이 필요합니다.",
+            message: "검토조서가 변경되어 새 승인 요청이 필요합니다.",
           },
           meta: { requestId },
         },

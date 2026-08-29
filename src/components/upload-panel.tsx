@@ -37,7 +37,7 @@ export function UploadPanel({
       setResult({
         name: file.name,
         status: "error",
-        detail: "먼저 자료를 연결할 케이스를 생성해 주세요.",
+        detail: "먼저 자료를 연결할 세무 업무를 등록해 주세요.",
       });
       return;
     }
@@ -79,7 +79,7 @@ export function UploadPanel({
         status: "queued",
         detail: payload.data.deduplicated
           ? "동일한 파일이 이미 처리 대기 중입니다."
-          : `검역 작업 ${payload.data.job.id.slice(-8)}이 대기열에 추가됐습니다.`,
+          : `보안 검사 작업 ${payload.data.job.id.slice(-8)}이 대기열에 추가됐습니다.`,
       });
     } catch (cause) {
       setResult({
@@ -94,7 +94,7 @@ export function UploadPanel({
   return (
     <section className="upload-panel">
       <label className="upload-source-field">
-        <span>자료 성격</span>
+        <span>자료 유형</span>
         <select
           value={sourceType}
           onChange={(event) =>
@@ -104,11 +104,11 @@ export function UploadPanel({
             )
           }
         >
-          <option value="BUSINESS_RECORD">업무 증빙</option>
+          <option value="BUSINESS_RECORD">고객사 자료</option>
           {canIngestAuthority ? (
-            <option value="TAX_AUTHORITY">세법·공식 자료</option>
+            <option value="TAX_AUTHORITY">세법령·공식 자료</option>
           ) : null}
-          <option value="INTERNAL_POLICY">내부 정책</option>
+          <option value="INTERNAL_POLICY">내부 지침</option>
         </select>
       </label>
       {sourceType === "TAX_AUTHORITY" ? (
@@ -181,8 +181,8 @@ export function UploadPanel({
       <div className="upload-security">
         <ShieldCheck size={14} />
         <span>
-          업로드 즉시 격리됩니다. MIME·파일 서명·체크섬·악성 파일 검사를
-          통과해야 검색할 수 있습니다.
+          업로드한 파일은 별도 공간에 보관됩니다. 파일 형식, 무결성, 악성코드
+          검사를 통과한 자료만 검색 근거로 사용할 수 있습니다.
         </span>
       </div>
       {result ? (

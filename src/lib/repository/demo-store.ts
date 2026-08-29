@@ -107,7 +107,7 @@ const demoReviewProvenance = {
 const demoReviewHash = hashWorkpaperArtifact({
   targetId: demoReviewTargetId,
   matterId: "vat-2025-q4",
-  title: "매입세액 불공제 검토 메모",
+  title: "매입세액 불공제 검토",
   version: 1,
   content: demoReviewContent,
   provenance: demoReviewProvenance,
@@ -119,8 +119,8 @@ function buildDemoReview(): ReviewRequest {
     matterId: "vat-2025-q4",
     client: "한빛테크 주식회사",
     taxType: "부가가치세",
-    period: "2025년 2기 확정",
-    title: "매입세액 불공제 검토 메모",
+    period: "2025년 제2기 확정신고",
+    title: "매입세액 불공제 검토",
     version: 1,
     content: demoReviewContent,
     provenance: demoReviewProvenance,
@@ -348,7 +348,7 @@ export function createWorkpaperDraft(input: {
       acquiredAt: item.acquiredAt,
     })),
     calculations: input.calculations,
-    openItems: ["Reviewer의 세무 판단과 계산 입력 확인"],
+    openItems: ["검토자의 세무 판단과 계산 입력값 확인"],
   };
   const provenance = {
     runId: input.runId,
@@ -550,7 +550,7 @@ export function createMatter(
       candidate.role !== "ANALYST",
   );
   if (!reviewer) {
-    throw new Error("현재 워크스페이스에서 Reviewer를 찾을 수 없습니다.");
+    throw new Error("현재 업무 공간에서 검토자를 찾을 수 없습니다.");
   }
   const id = `matter-${crypto.randomUUID().slice(0, 8)}`;
   const matter: Matter = {
@@ -610,7 +610,7 @@ export function enqueueDocument(
       !input.acquiredAt)
   ) {
     throw new Error(
-      "공식 세무 자료는 관리자만 검증 가능한 provenance와 함께 등록할 수 있습니다.",
+      "공식 세무 자료는 관리자만 검증 가능한 출처 이력과 함께 등록할 수 있습니다.",
     );
   }
   const store = getStore();
@@ -645,7 +645,7 @@ export function enqueueDocument(
       existingDocument.sourceType !== input.sourceType
     ) {
       throw new Error(
-        "같은 Idempotency-Key를 다른 업로드 또는 출처 분류에 재사용할 수 없습니다.",
+        "같은 중복 요청 방지 키를 다른 업로드 또는 출처 분류에 재사용할 수 없습니다.",
       );
     }
     return finalize({

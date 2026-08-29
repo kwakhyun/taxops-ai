@@ -16,7 +16,7 @@ export class DocumentChunkLimitError extends Error {
 
   constructor() {
     super(
-      "문서 전체를 허용된 청크 수 안에 인덱싱할 수 없습니다. 파일을 분할한 뒤 다시 업로드해 주세요.",
+      "문서 전체를 검색 단위로 나눌 수 없습니다. 파일을 분할한 뒤 다시 업로드해 주세요.",
     );
     this.name = "DocumentChunkLimitError";
   }

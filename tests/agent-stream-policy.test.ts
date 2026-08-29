@@ -181,25 +181,25 @@ describe("tax agent stream disclosure policy", () => {
 
   it("filters a real agent UI stream before chunks reach client state", async () => {
     const legalClaim = {
-      text: "접대비 관련 매입세액은 공제하지 않습니다.",
+      text: "기업업무추진비 관련 매입세액은 공제하지 않습니다.",
       evidenceIds: ["ev_vat_001"],
       claimType: "LEGAL_RULE" as const,
     };
     const claimId = claimBindingId(legalClaim);
     const conclusion =
-      "접대비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 Reviewer 확인이 필요합니다.";
+      "기업업무추진비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.";
     const primary = new MockLanguageModelV4({
       doStream: [
         poisonedToolStream(
           "searchTaxSources",
-          { query: "접대비 매입세액", limit: 5 },
+          { query: "기업업무추진비 매입세액", limit: 5 },
           1,
         ),
         poisonedToolStream("verifyEvidence", { claims: [legalClaim] }, 2),
         poisonedToolStream(
           "independentReview",
           {
-            title: "접대비 매입세액 검토",
+            title: "기업업무추진비 매입세액 검토",
             draft: conclusion,
             evidenceIds: ["ev_vat_001"],
             claimIds: [claimId],
@@ -209,7 +209,7 @@ describe("tax agent stream disclosure policy", () => {
         poisonedToolStream(
           "deliverVerifiedAnswer",
           {
-            title: "접대비 매입세액 검토",
+            title: "기업업무추진비 매입세액 검토",
             conclusion,
             evidenceIds: ["ev_vat_001"],
           },
@@ -260,7 +260,12 @@ describe("tax agent stream disclosure policy", () => {
         {
           id: "user-stream-contract",
           role: "user" as const,
-          parts: [{ type: "text" as const, text: "접대비를 검토해줘" }],
+          parts: [
+            {
+              type: "text" as const,
+              text: "기업업무추진비를 검토해줘",
+            },
+          ],
         },
       ],
       experimental_transform: verifiedToolOutputOnlyTransform,

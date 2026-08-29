@@ -7,11 +7,11 @@ export interface GoldenCase {
 
 const retrievalSeeds = [
   ["RET-001", "사업과 직접 관련 없는 지출의 매입세액"],
-  ["RET-002", "접대비 관련 매입세액 불공제"],
+  ["RET-002", "기업업무추진비 관련 매입세액 불공제"],
   ["RET-003", "부가가치세 업무가이드 불공제"],
   ["RET-004", "매입세액 불공제 기준"],
   ["RET-005", "사업과 직접 관련이 없는 지출"],
-  ["RET-006", "접대비 매입세액 공제 여부"],
+  ["RET-006", "기업업무추진비 매입세액 공제 여부"],
 ] satisfies ReadonlyArray<readonly [string, string]>;
 
 const retrievalCases: GoldenCase[] = retrievalSeeds.map(([id, query]) => ({
@@ -22,12 +22,12 @@ const retrievalCases: GoldenCase[] = retrievalSeeds.map(([id, query]) => ({
 }));
 
 const ledgerSeeds = [
-  ["RET-007", "접대비 거래처 업무 관련성 메모"],
+  ["RET-007", "기업업무추진비 거래의 업무 관련성 메모"],
   ["RET-008", "매입매출장 행 384 391"],
   ["RET-009", "공급가액 18,420,000원 부가세"],
-  ["RET-010", "계정 812 접대비"],
+  ["RET-010", "계정 812 기업업무추진비"],
   ["RET-011", "거래처 6곳 중 메모가 비어 있음"],
-  ["RET-012", "원장 접대비 부가세 1,842,000원"],
+  ["RET-012", "원장 기업업무추진비 부가가치세액 1,842,000원"],
 ] satisfies ReadonlyArray<readonly [string, string]>;
 
 const returnSeeds = [
@@ -55,8 +55,8 @@ retrievalCases.push(
 );
 
 const abstentionSeeds = [
-  ["ABS-001", "외국납부세액공제한도 계산"],
-  ["ABS-002", "근로소득연말정산 의료비공제"],
+  ["ABS-001", "외국납부세액공제 한도 계산"],
+  ["ABS-002", "근로소득 연말정산 의료비 세액공제"],
   ["ABS-003", "취득세중과세율 적용"],
   ["ABS-004", "상속세가업승계 요건"],
   ["ABS-005", "관세품목분류 코드"],

@@ -32,7 +32,7 @@ export async function GET(
           error: {
             code: "DOCUMENT_NOT_REVIEWABLE",
             message:
-              "담당 Reviewer가 업로더와 다른 승인 대기 문서만 검토할 수 있습니다.",
+              "자료 등록자와 다른 담당 검토자만 검토 대기 자료를 처리할 수 있습니다.",
           },
           meta: { requestId },
         },
@@ -75,7 +75,7 @@ export async function PATCH(
           error: {
             code: "DOCUMENT_NOT_REVIEWABLE",
             message:
-              "담당자, 업로더 분리, 체크섬과 대기 상태를 다시 확인해 주세요.",
+              "담당 검토자, 자료 등록자 분리, 파일 해시와 대기 상태를 다시 확인해 주세요.",
           },
           meta: { requestId },
         },

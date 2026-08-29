@@ -17,7 +17,7 @@ export const demoReconciliationClaims = [
     claimType: "TRANSACTION_FACT",
   },
   {
-    text: "공급가액 18,420,000원, 부가세 1,842,000원.",
+    text: "공급가액 18,420,000원, 부가가치세액 1,842,000원.",
     evidenceIds: ["ev_ledger_019"],
     claimType: "TRANSACTION_FACT",
   },
@@ -32,7 +32,7 @@ export const demoReconciliationClaims = [
     claimType: "TRANSACTION_FACT",
   },
   {
-    text: "접대비 관련 매입세액은 공제하지 않습니다.",
+    text: "기업업무추진비 관련 매입세액은 공제하지 않습니다.",
     evidenceIds: ["ev_vat_001"],
     claimType: "LEGAL_RULE",
   },
@@ -67,13 +67,14 @@ export async function createDemoTaxResponse(input: {
 }) {
   const question = latestQuestion(input.messages);
   const reconciliationQuestion =
-    /(매입세액|접대비)/.test(question) && /(불공제|신고서|차이)/.test(question);
+    /(매입세액|접대비|기업업무추진비)/.test(question) &&
+    /(불공제|신고서|차이)/.test(question);
   const sources = await retrieveEvidenceForContext({
     tenantId: input.tenantId,
     matterId: input.matterId,
     taxReferenceDate: input.taxReferenceDate,
     query: reconciliationQuestion
-      ? "접대비 매입세액 불공제 신고서 원장 업무 관련성 메모"
+      ? "기업업무추진비 매입세액 불공제 신고서 원장 업무 관련성 메모"
       : question,
     limit: 3,
     aiPolicy: input.aiPolicy,
@@ -114,7 +115,7 @@ export async function createDemoTaxResponse(input: {
         id: "workflow-status",
         data: {
           stage: "RETRIEVE",
-          label: "케이스 자료와 세무 지식을 함께 검색하고 있습니다.",
+          label: "업무 자료와 세무 지식을 함께 검색하고 있습니다.",
           status: "running",
           traceId: input.traceId,
         },
@@ -154,11 +155,11 @@ export async function createDemoTaxResponse(input: {
         ? [
             "검토 결론\n",
             "매입세액 불공제 금액이 신고서 초안에 740,000원 적게 반영된 것으로 보입니다. ",
-            "접대비 계정의 부가세 1,842,000원 중 신고서에는 1,102,000원만 불공제 처리되었습니다. [근거 1][근거 2][근거 3]\n\n",
+            "기업업무추진비 계정의 부가가치세액 1,842,000원 중 신고서에는 1,102,000원만 불공제 처리되었습니다. [근거 1][근거 2][근거 3]\n\n",
             "확인이 필요한 항목\n",
             "• 업무 관련성 메모가 없는 거래 2건의 지출 목적과 참석자를 확인하세요.\n",
             "• 소명되지 않으면 불공제 매입세액 740,000원을 추가 반영하는 것이 보수적입니다.\n",
-            "• 이 결과는 워크페이퍼 초안이며 Reviewer 승인 전에는 신고서에 반영되지 않습니다.",
+            "• 이 결과는 검토조서 초안이며 검토자 승인 전에는 신고서에 반영되지 않습니다.",
           ]
         : sources.length
           ? [
@@ -167,12 +168,12 @@ export async function createDemoTaxResponse(input: {
                 (source, index) =>
                   `[근거 ${index + 1}] ${source.documentName}, ${source.section}: ${source.excerpt}\n`,
               ),
-              "\n현재 자료만으로 확정적인 세무 결론은 내리지 않았습니다. Reviewer가 근거의 완전성을 확인해 주세요.",
+              "\n현재 자료만으로 확정적인 세무 결론은 내리지 않았습니다. 검토자가 근거의 완전성을 확인해 주세요.",
             ]
           : [
               "답변을 보류합니다.\n\n",
-              "현재 케이스의 승인된 자료에서 질문을 뒷받침할 근거를 찾지 못했습니다. ",
-              "관련 문서를 업로드해 인덱싱을 완료하거나 질문 범위를 좁혀 주세요. 근거 없이 세무 결론을 만들지 않습니다.",
+              "현재 세무 업무의 승인된 자료에서 질문을 뒷받침할 근거를 찾지 못했습니다. ",
+              "관련 자료를 등록해 검색 준비를 완료하거나 질문 범위를 좁혀 주세요. 근거 없이 세무 결론을 만들지 않습니다.",
             ];
       for (const delta of chunks) {
         writer.write({ type: "text-delta", id: textId, delta });
