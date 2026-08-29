@@ -20,3 +20,4 @@ test-results
 artifacts/*
 !artifacts/evaluation-report.json
 !artifacts/dashboard-visual.png
+!artifacts/assistant-visual.png
