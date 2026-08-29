@@ -232,7 +232,7 @@ const documents = [
 ] as const;
 
 const searchableContent =
-  "접대비 관련 매입세액은 공제하지 않습니다. 업무 관련성을 확인합니다.";
+  "기업업무추진비 관련 매입세액은 공제하지 않습니다. 업무 관련성을 확인합니다.";
 const contractEvidenceBinding = {
   id: contractChunkIds[0]!,
   documentName: "contract-0.txt",
@@ -249,7 +249,7 @@ const contractEvidenceBinding = {
   acquiredAt: "2025-01-02T00:00:00.000Z",
 };
 const databaseLegalClaim = {
-  text: "접대비 관련 매입세액은 공제하지 않습니다.",
+  text: "기업업무추진비 관련 매입세액은 공제하지 않습니다.",
   evidenceIds: [contractChunkIds[0]!],
   claimType: "LEGAL_RULE" as const,
 };
@@ -350,7 +350,7 @@ beforeAll(async () => {
       const effectiveTo = index === 5 ? "2025-01-01T00:00:00Z" : null;
       const isCurrent = index !== 3;
       const content =
-        index >= 8 ? "담당 Reviewer가 확인할 소명 내용" : searchableContent;
+        index >= 8 ? "담당 검토자가 확인할 소명 내용" : searchableContent;
       const contentHash = sha256(content);
       const manifestSha256 = evidenceManifestHash({
         documentId: document.id,
@@ -546,14 +546,18 @@ describe("PostgreSQL production contracts", () => {
         ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = EXCLUDED.role
       `;
 
-      const created = await createMatter(analyst, {
-        client: clientName,
-        taxType: "부가가치세",
-        period: "2026년 1기 예정",
-        summary: "동명이인 Reviewer UUID 바인딩 계약을 검증합니다.",
-        dueDate: "2026. 11. 30",
-        reviewerId: reviewerIds[1],
-      });
+      const created = await createMatter(
+        analyst,
+        {
+          client: clientName,
+          taxType: "부가가치세",
+          period: "2026년 1기 예정",
+          summary: "동명이인 검토자 UUID 바인딩 계약을 검증합니다.",
+          dueDate: "2026. 11. 30",
+          reviewerId: reviewerIds[1],
+        },
+        "tr_duplicate_reviewer_contract",
+      );
       createdId = created.id;
       const rows = await owner<Array<{ reviewer_id: string }>>`
         SELECT reviewer_id::text
@@ -931,12 +935,12 @@ describe("PostgreSQL production contracts", () => {
         traceId: "tr_self_review",
         taxReferenceDate: "2025-12-31T23:59:59+09:00",
         title: "자기 검토 차단 계약",
-        conclusion: "Reviewer가 작성자이면 승인 요청을 만들 수 없습니다.",
+        conclusion: "검토자가 작성자이면 승인 요청을 만들 수 없습니다.",
         evidenceIds: [contractChunkIds[0]!],
         evidenceHashes: { [contractChunkIds[0]!]: sha256(searchableContent) },
         calculations: [],
       }),
-    ).rejects.toThrow(/작성자와 Reviewer가 분리/);
+    ).rejects.toThrow(/작성자와 검토자가 분리/);
   });
 
   it("keeps workpaper lineage behind the bounded application function", async () => {
@@ -1098,7 +1102,7 @@ describe("PostgreSQL production contracts", () => {
       tenantId,
       matterId: primaryMatterId,
       taxReferenceDate: "2025-12-31T23:59:59+09:00",
-      query: "접대비 관련 매입세액 불공제",
+      query: "기업업무추진비 관련 매입세액 불공제",
       limit: 8,
     });
 
@@ -1109,7 +1113,7 @@ describe("PostgreSQL production contracts", () => {
       tenantId,
       matterId: primaryMatterId,
       taxReferenceDate: "2025-12-31T23:59:59+09:00",
-      query: "접대비 관련 매입세액 불공제",
+      query: "기업업무추진비 관련 매입세액 불공제",
       limit: 8,
       embedding: Array.from({ length: 1_536 }, () => 0),
     });
@@ -1136,7 +1140,7 @@ describe("PostgreSQL production contracts", () => {
         tenantId,
         matterId: "00000000-0000-4000-8000-000000000999",
         taxReferenceDate: "2025-12-31T23:59:59+09:00",
-        query: "접대비 관련 매입세액 불공제",
+        query: "기업업무추진비 관련 매입세액 불공제",
         limit: 8,
       }),
     ).resolves.toEqual([]);
@@ -1192,15 +1196,15 @@ describe("PostgreSQL production contracts", () => {
       modelId: "contract-primary",
       monthlyBudgetKrw: 1_000_000,
     });
-    const title = "실제 DB 접대비 검토";
+    const title = "실제 DB 기업업무추진비 검토";
     const conclusion =
-      "접대비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 Reviewer 확인이 필요합니다.";
+      "기업업무추진비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.";
     const primary = new MockLanguageModelV4({
       modelId: "contract-primary",
       doGenerate: [
         modelToolCall(
           "searchTaxSources",
-          { query: "접대비 관련 매입세액 불공제", limit: 5 },
+          { query: "기업업무추진비 관련 매입세액 불공제", limit: 5 },
           1,
         ),
         modelToolCall(
@@ -1248,7 +1252,9 @@ describe("PostgreSQL production contracts", () => {
       { primaryModel: primary, verifierModel },
     );
 
-    await agent.generate({ prompt: "접대비 매입세액을 검토해줘" });
+    await agent.generate({
+      prompt: "기업업무추진비 매입세액을 검토해줘",
+    });
     await finishAgentRun(analyst, {
       runId,
       status: "AWAITING_REVIEW",
@@ -1359,9 +1365,9 @@ describe("PostgreSQL production contracts", () => {
       modelId: "contract-primary",
       monthlyBudgetKrw: 1_000_000,
     });
-    const title = "검증 거부 접대비 검토";
+    const title = "검증 거부 기업업무추진비 검토";
     const conclusion =
-      "접대비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 Reviewer 확인이 필요합니다.";
+      "기업업무추진비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.";
     const agent = createTaxAgent(
       agentContext(analyst, primaryMatterId, runId, traceId),
       {
@@ -1369,7 +1375,7 @@ describe("PostgreSQL production contracts", () => {
           doGenerate: [
             modelToolCall(
               "searchTaxSources",
-              { query: "접대비 관련 매입세액 불공제", limit: 5 },
+              { query: "기업업무추진비 관련 매입세액 불공제", limit: 5 },
               1,
             ),
             modelToolCall(
@@ -1414,7 +1420,9 @@ describe("PostgreSQL production contracts", () => {
       },
     );
 
-    await agent.generate({ prompt: "검증 후 접대비 결론을 저장해줘" });
+    await agent.generate({
+      prompt: "검증 후 기업업무추진비 결론을 저장해줘",
+    });
     await finishAgentRun(analyst, {
       runId,
       status: "VERIFY",
@@ -1441,9 +1449,9 @@ describe("PostgreSQL production contracts", () => {
       modelId: "contract-primary",
       monthlyBudgetKrw: 1_000_000,
     });
-    const title = "변조 차단 접대비 검토";
+    const title = "변조 차단 기업업무추진비 검토";
     const reviewedConclusion =
-      "접대비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 Reviewer 확인이 필요합니다.";
+      "기업업무추진비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.";
     const agent = createTaxAgent(
       agentContext(analyst, primaryMatterId, runId, traceId),
       {
@@ -1451,7 +1459,7 @@ describe("PostgreSQL production contracts", () => {
           doGenerate: [
             modelToolCall(
               "searchTaxSources",
-              { query: "접대비 관련 매입세액 불공제", limit: 5 },
+              { query: "기업업무추진비 관련 매입세액 불공제", limit: 5 },
               1,
             ),
             modelToolCall(
@@ -1578,12 +1586,12 @@ describe("PostgreSQL production contracts", () => {
           doGenerate: [
             modelToolCall(
               "searchTaxSources",
-              { query: "접대비 관련 매입세액 불공제", limit: 5 },
+              { query: "기업업무추진비 관련 매입세액 불공제", limit: 5 },
               1,
             ),
             modelToolCall(
               "abstain",
-              { reason: "현재 테넌트에 승인된 근거가 없습니다." },
+              { reason: "현재 조직에 승인된 근거가 없습니다." },
               2,
             ),
           ],

@@ -17,7 +17,10 @@ test.describe("TaxOps AI critical user journeys", () => {
       page.getByRole("heading", { name: "오늘의 세무 업무" }),
     ).toBeVisible();
 
-    await page.getByRole("link", { name: "세무 업무" }).click();
+    await page
+      .getByRole("navigation", { name: "세무 업무 메뉴" })
+      .getByRole("link", { name: "세무 업무", exact: true })
+      .click();
     await page.getByPlaceholder("고객사, 세목, 기간 검색").fill("리브온");
     await expect(
       page.getByText("리브온 커머스", { exact: true }),
@@ -84,7 +87,9 @@ test.describe("TaxOps AI critical user journeys", () => {
       .click();
     await expect(page.getByText(/검토 결론/)).toBeVisible({ timeout: 15_000 });
     await expect(
-      page.getByText(/분석 항목 6개 중 6개 근거 확인/),
+      page
+        .locator(".assistant-evidence-panel")
+        .getByText(/분석 항목 6개 중 6개 근거 확인/),
     ).toBeVisible();
 
     const composer = page.getByLabel("AI에게 질문");
