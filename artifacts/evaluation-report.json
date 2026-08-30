@@ -1,6 +1,6 @@
 {
   "schemaVersion": "2.0",
-  "generatedAt": "2026-08-30T20:51:15.908Z",
+  "generatedAt": "2026-08-30T21:02:16.863Z",
   "promptVersion": "tax-memo.v1.3.1",
   "promptHash": "1a82dac940abe28eebfdb43cfe17bf611d4fb06e56a86baed77a76331bd90d9f",
   "retrieverVersion": "hybrid-rag.v1.2.0",
@@ -21,7 +21,7 @@
     "fixtureTenantLeakageCount": 0,
     "generatedCitationSupport": 100,
     "generatedPiiLeakageCount": 0,
-    "generatedLatencyP95Ms": 35.13,
+    "generatedLatencyP95Ms": 29.56,
     "generatedEstimatedCostP95Krw": 10.5
   },
   "thresholds": {
@@ -750,7 +750,7 @@
       "id": "GEN-001",
       "citationPass": true,
       "piiLeakageCount": 0,
-      "latencyMs": 35.13,
+      "latencyMs": 29.56,
       "estimatedCostKrw": 10.5,
       "inputTokens": 600,
       "outputTokens": 300
@@ -759,7 +759,7 @@
       "id": "GEN-002",
       "citationPass": true,
       "piiLeakageCount": 0,
-      "latencyMs": 32.05,
+      "latencyMs": 28.67,
       "estimatedCostKrw": 10.5,
       "inputTokens": 600,
       "outputTokens": 300
@@ -768,7 +768,7 @@
       "id": "GEN-003",
       "citationPass": true,
       "piiLeakageCount": 0,
-      "latencyMs": 31.28,
+      "latencyMs": 26.3,
       "estimatedCostKrw": 10.5,
       "inputTokens": 600,
       "outputTokens": 300
@@ -777,7 +777,7 @@
       "id": "GEN-004",
       "citationPass": true,
       "piiLeakageCount": 0,
-      "latencyMs": 30.5,
+      "latencyMs": 25.68,
       "estimatedCostKrw": 10.5,
       "inputTokens": 600,
       "outputTokens": 300
@@ -786,7 +786,7 @@
       "id": "GEN-005",
       "citationPass": true,
       "piiLeakageCount": 0,
-      "latencyMs": 29.48,
+      "latencyMs": 24.94,
       "estimatedCostKrw": 10.5,
       "inputTokens": 600,
       "outputTokens": 300
