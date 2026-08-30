@@ -9,6 +9,9 @@ import {
   X,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import type { Matter } from "@/lib/domain/types";
 
 type UploadResult = {
   name: string;
@@ -19,11 +22,18 @@ type UploadResult = {
 export function UploadPanel({
   matterId,
   canIngestAuthority = false,
+  matters = [],
+  onBusyChange,
 }: {
   matterId?: string;
   canIngestAuthority?: boolean;
+  matters?: Pick<Matter, "id" | "client" | "taxType" | "period">[];
+  onBusyChange?: (busy: boolean) => void;
 }) {
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const uploadLock = useRef(false);
+  const [selectedMatterId, setSelectedMatterId] = useState(matterId ?? "");
   const [dragging, setDragging] = useState(false);
   const [result, setResult] = useState<UploadResult>();
   const [sourceType, setSourceType] = useState<
@@ -31,13 +41,24 @@ export function UploadPanel({
   >("BUSINESS_RECORD");
   const [sourcePublisher, setSourcePublisher] = useState("");
   const [sourceUri, setSourceUri] = useState("");
+  const busy = result?.status === "uploading";
+  const targetMatterId = matterId ?? selectedMatterId;
 
   async function upload(file: File) {
-    if (!matterId) {
+    if (uploadLock.current) return;
+    if (!targetMatterId) {
       setResult({
         name: file.name,
         status: "error",
-        detail: "먼저 자료를 연결할 세무 업무를 등록해 주세요.",
+        detail: "먼저 자료를 연결할 세무 업무를 선택해 주세요.",
+      });
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setResult({
+        name: file.name,
+        status: "error",
+        detail: "파일당 최대 15 MB까지 업로드할 수 있습니다.",
       });
       return;
     }
@@ -52,10 +73,12 @@ export function UploadPanel({
       });
       return;
     }
+    uploadLock.current = true;
+    onBusyChange?.(true);
     setResult({ name: file.name, status: "uploading", detail: "파일 검증 중" });
     const formData = new FormData();
     formData.set("file", file);
-    formData.set("matterId", matterId);
+    formData.set("matterId", targetMatterId);
     formData.set("sourceType", sourceType);
     if (sourceType === "TAX_AUTHORITY") {
       formData.set("sourcePublisher", sourcePublisher);
@@ -81,6 +104,7 @@ export function UploadPanel({
           ? "동일한 파일이 이미 처리 대기 중입니다."
           : `보안 검사 작업 ${payload.data.job.id.slice(-8)}이 대기열에 추가됐습니다.`,
       });
+      router.refresh();
     } catch (cause) {
       setResult({
         name: file.name,
@@ -88,14 +112,52 @@ export function UploadPanel({
         detail:
           cause instanceof Error ? cause.message : "업로드하지 못했습니다.",
       });
+    } finally {
+      uploadLock.current = false;
+      onBusyChange?.(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   }
 
   return (
-    <section className="upload-panel">
+    <section
+      className="upload-panel"
+      id="upload-panel"
+      aria-label="세무 자료 업로드"
+    >
+      {!matterId ? (
+        <div className="upload-matter-picker">
+          <label className="upload-source-field">
+            <span>연결할 세무 업무</span>
+            <select
+              value={selectedMatterId}
+              disabled={busy}
+              onChange={(event) => setSelectedMatterId(event.target.value)}
+            >
+              <option value="">세무 업무를 선택해 주세요</option>
+              {matters.map((matter) => (
+                <option key={matter.id} value={matter.id}>
+                  {matter.client} · {matter.taxType} · {matter.period}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p>
+            {matters.length ? (
+              "업무를 선택하면 해당 업무에 자료가 연결됩니다."
+            ) : (
+              <>
+                등록된 업무가 없습니다.{" "}
+                <Link href="/cases/new">새 업무를 등록해 주세요.</Link>
+              </>
+            )}
+          </p>
+        </div>
+      ) : null}
       <label className="upload-source-field">
         <span>자료 유형</span>
         <select
+          disabled={busy}
           value={sourceType}
           onChange={(event) =>
             setSourceType(
@@ -116,6 +178,7 @@ export function UploadPanel({
           <label className="upload-source-field">
             <span>발행기관</span>
             <input
+              disabled={busy}
               required
               maxLength={200}
               value={sourcePublisher}
@@ -126,6 +189,7 @@ export function UploadPanel({
           <label className="upload-source-field">
             <span>공식 원문 주소</span>
             <input
+              disabled={busy}
               required
               type="url"
               maxLength={2000}
@@ -147,8 +211,15 @@ export function UploadPanel({
         onDrop={(event) => {
           event.preventDefault();
           setDragging(false);
-          const file = event.dataTransfer.files[0];
-          if (file) void upload(file);
+          if (uploadLock.current) return;
+          const files = event.dataTransfer.files;
+          if (files.length > 1) {
+            setResult({
+              name: "파일 선택",
+              status: "error",
+              detail: "한 번에 파일 1개씩 업로드해 주세요.",
+            });
+          } else if (files[0]) void upload(files[0]);
         }}
       >
         <span className="upload-icon">
@@ -161,19 +232,21 @@ export function UploadPanel({
         <button
           className="button button-secondary button-compact"
           type="button"
-          disabled={!matterId}
+          disabled={!targetMatterId || busy}
           onClick={() => inputRef.current?.click()}
         >
-          파일 선택
+          {busy ? "업로드 중" : "파일 선택"}
         </button>
         <input
           className="sr-only"
           aria-label="업로드할 세무 자료 선택"
           ref={inputRef}
           type="file"
+          disabled={!targetMatterId || busy}
           accept=".pdf,.docx,.xlsx,.csv,.txt"
           onChange={(event) => {
             const file = event.target.files?.[0];
+            event.currentTarget.value = "";
             if (file) void upload(file);
           }}
         />
@@ -202,6 +275,7 @@ export function UploadPanel({
           <button
             type="button"
             aria-label="업로드 상태 닫기"
+            disabled={busy}
             onClick={() => setResult(undefined)}
           >
             <X size={15} />

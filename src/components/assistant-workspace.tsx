@@ -1,12 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import {
+  ArrowDown,
   ArrowUp,
   Bot,
-  Check,
   ChevronRight,
   CircleDollarSign,
   FileText,
+  LoaderCircle,
   Paperclip,
   RefreshCw,
   SearchCheck,
@@ -14,18 +16,29 @@ import {
   Sparkles,
   Square,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AssistantMessagePart } from "@/components/assistant-message-part";
-import type { AssistantEvidence } from "@/components/assistant-message-model";
+import {
+  assistantErrorMessage,
+  streamedAssistantEvidence,
+  type AssistantEvidence,
+} from "@/components/assistant-message-model";
+import { Dialog } from "@/components/dialog";
+import { UploadPanel } from "@/components/upload-panel";
 import { useTaxAssistant } from "@/components/use-tax-assistant";
 import type { Matter } from "@/lib/domain/types";
 import { workflowStageLabel } from "@/lib/ui/labels";
+import styles from "./assistant-workspace.module.css";
 
 const suggestions = [
   "매입세액 불공제 의심 항목과 신고서 반영 차이를 찾아 주세요",
   "영세율 첨부서류 누락 여부를 근거와 함께 점검해 주세요",
   "검토조서 초안의 핵심 결론과 추가 확인 사항을 정리해 주세요",
 ];
+const views = [
+  { key: "chat", label: "대화" },
+  { key: "evidence", label: "참고 근거" },
+] as const;
 
 export function AssistantWorkspace({
   matter,
@@ -41,6 +54,13 @@ export function AssistantWorkspace({
   initialEvidence: AssistantEvidence[];
 }) {
   const [input, setInput] = useState("");
+  const [view, setView] = useState<"chat" | "evidence">("chat");
+  const [attachmentOpen, setAttachmentOpen] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [showLatest, setShowLatest] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const followResponse = useRef(true);
   const {
     messages,
     sendMessage,
@@ -49,122 +69,235 @@ export function AssistantWorkspace({
     error,
     busy,
     currentStage,
-    streamedEvidence,
     latestVerification,
     panelEvidence,
   } = useTaxAssistant({ matterId: matter.id, initialEvidence });
 
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    if (
+      scroll &&
+      messages.length > 0 &&
+      followResponse.current &&
+      view === "chat"
+    ) {
+      scroll.scrollTop = scroll.scrollHeight;
+    }
+  }, [messages, busy, view]);
+
+  useEffect(() => {
+    const field = inputRef.current;
+    if (!field) return;
+    field.style.height = "auto";
+    field.style.height = `${Math.min(field.scrollHeight, 120)}px`;
+  }, [input]);
+
   function submit(text = input) {
     const value = text.trim();
     if (!value || busy) return;
+    followResponse.current = true;
+    setShowLatest(false);
+    setView("chat");
     void sendMessage({ text: value });
     setInput("");
   }
 
   return (
-    <div className="assistant-layout">
-      <section className="assistant-chat">
-        <div className="assistant-context-bar">
-          <div className="assistant-context-primary">
-            <span className="case-logo">{matter.client.slice(0, 1)}</span>
-            <div>
-              <strong>{matter.client}</strong>
-              <span>
-                {matter.taxType} · {matter.period}
-              </span>
-            </div>
-          </div>
-          <div className="context-chips">
-            <span>
-              <FileText size={12} /> 자료 {documentCount}건
-            </span>
-            <span>
-              <ShieldCheck size={12} /> 승인된 자료만 검색
-            </span>
-            {currentStage ? (
-              <span className="context-stage">
-                <Sparkles size={12} /> {workflowStageLabel(currentStage)}
-              </span>
-            ) : null}
-          </div>
-        </div>
+    <div className={styles.workspace} data-view={view} id="analysis-workspace">
+      <header className={styles.context}>
+        <Link
+          className={styles.matter}
+          href={`/cases/${matter.id}`}
+          title="현재 세무 업무 보기"
+        >
+          <span className="case-logo" aria-hidden="true">
+            {matter.client.slice(0, 1)}
+          </span>
+          <span className={styles.matterCopy}>
+            <strong>{matter.client}</strong>
+            <small>
+              {matter.taxType} · {matter.period}
+            </small>
+          </span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
+        <Link
+          className={styles.documentsLink}
+          href={`/documents?matter=${matter.id}`}
+        >
+          <FileText size={15} aria-hidden="true" /> 자료 {documentCount}건
+        </Link>
+      </header>
 
-        <div className="message-scroll" aria-live="polite" aria-busy={busy}>
-          {messages.length === 0 ? (
-            <div className="assistant-empty">
-              <span className="assistant-orb">
-                <Sparkles size={24} />
-              </span>
-              <span className="card-kicker">근거 기반 세무 분석</span>
-              <h1>근거를 확인하며 세무 업무를 시작하세요.</h1>
-              <p>
-                TaxOps AI는 현재 업무에서 보안 검사를 통과한 자료만 검색하고,
-                계산과 독립 검증을 거쳐 답합니다. 근거가 부족하면 결론을
-                보류합니다.
-              </p>
-              <div className="suggestion-list">
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => submit(suggestion)}
-                  >
-                    <span>{suggestion}</span>
-                    <ChevronRight size={15} />
-                  </button>
-                ))}
+      <div className={styles.tabs} role="tablist" aria-label="AI 작업 영역">
+        {views.map(({ key, label }, index) => (
+          <button
+            type="button"
+            role="tab"
+            id={`assistant-tab-${key}`}
+            aria-selected={view === key}
+            aria-controls={`assistant-panel-${key}`}
+            tabIndex={view === key ? 0 : -1}
+            onClick={() => setView(key)}
+            key={key}
+            onKeyDown={(event) => {
+              const next =
+                event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? 1
+                    : event.key === "ArrowRight" || event.key === "ArrowLeft"
+                      ? 1 - index
+                      : undefined;
+              if (next === undefined) return;
+              event.preventDefault();
+              setView(views[next]!.key);
+              document
+                .getElementById(`assistant-tab-${views[next]!.key}`)
+                ?.focus();
+            }}
+          >
+            {label}
+            {key === "evidence" ? <span>{panelEvidence.length}</span> : null}
+          </button>
+        ))}
+      </div>
+
+      <section
+        className={styles.chat}
+        id="assistant-panel-chat"
+        aria-label="AI 답변과 질문"
+      >
+        <div className={styles.conversation}>
+          <div
+            ref={scrollRef}
+            className={styles.messages}
+            data-testid="message-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label="대화 내용"
+            onScroll={(event) => {
+              const el = event.currentTarget;
+              const atBottom =
+                el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+              followResponse.current = atBottom;
+              setShowLatest(!atBottom && messages.length > 0);
+            }}
+          >
+            {messages.length === 0 ? (
+              <div className={styles.empty}>
+                <span className={styles.orb}>
+                  <Sparkles size={23} aria-hidden="true" />
+                </span>
+                <h1>어떤 세무 업무를 도와드릴까요?</h1>
+                <p>현재 업무의 승인된 자료를 근거로 분석합니다.</p>
+                <div className={styles.suggestions}>
+                  {suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => submit(suggestion)}
+                      disabled={busy}
+                    >
+                      <span>{suggestion}</span>
+                      <ChevronRight size={16} aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="message-list">
-              {messages.map((message) => (
-                <article
-                  className={`message message-${message.role}`}
-                  key={message.id}
-                >
-                  <div className="message-avatar">
-                    {message.role === "user" ? userInitials : <Bot size={16} />}
-                  </div>
-                  <div className="message-content">
-                    <div className="message-label">
-                      <strong>
-                        {message.role === "user" ? userName : "TaxOps AI"}
-                      </strong>
-                      {message.role === "assistant" ? (
-                        <span>근거 기반 분석</span>
-                      ) : null}
-                    </div>
-                    {message.parts.map((part, index) => (
-                      <AssistantMessagePart
-                        part={part}
-                        evidence={streamedEvidence}
-                        matterId={matter.id}
-                        key={
-                          "toolCallId" in part
-                            ? part.toolCallId
-                            : "id" in part && typeof part.id === "string"
-                              ? part.id
-                              : index
-                        }
-                      />
-                    ))}
-                  </div>
-                </article>
-              ))}
-              {error ? (
-                <p className="assistant-error" role="alert">
-                  {error.message}
-                </p>
-              ) : null}
-            </div>
-          )}
+            ) : (
+              <div
+                className={styles.messageList}
+                role="log"
+                aria-live="polite"
+                aria-busy={busy}
+              >
+                <h1 className="sr-only">세무 AI 파트너 대화</h1>
+                {messages.map((message) => {
+                  const messageEvidence = streamedAssistantEvidence(message);
+                  return (
+                    <article
+                      className={`message message-${message.role}`}
+                      key={message.id}
+                    >
+                      <div className="message-avatar" aria-hidden="true">
+                        {message.role === "user" ? (
+                          userInitials
+                        ) : (
+                          <Bot size={16} />
+                        )}
+                      </div>
+                      <div className="message-content">
+                        <div className="message-label">
+                          <strong>
+                            {message.role === "user" ? userName : "TaxOps AI"}
+                          </strong>
+                          {message.role === "assistant" ? (
+                            <span>근거 기반 분석</span>
+                          ) : null}
+                        </div>
+                        {message.parts.map((part, index) => (
+                          <AssistantMessagePart
+                            part={part}
+                            evidence={messageEvidence}
+                            matterId={matter.id}
+                            key={
+                              "toolCallId" in part
+                                ? part.toolCallId
+                                : "id" in part && typeof part.id === "string"
+                                  ? part.id
+                                  : index
+                            }
+                          />
+                        ))}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {showLatest ? (
+            <button
+              className={styles.latest}
+              type="button"
+              onClick={() => {
+                followResponse.current = true;
+                if (scrollRef.current)
+                  scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                setShowLatest(false);
+              }}
+            >
+              <ArrowDown size={14} aria-hidden="true" /> 최신 답변
+            </button>
+          ) : null}
         </div>
 
-        <div className="composer-wrap">
-          <div className="composer">
+        <div className={styles.composerWrap}>
+          {error ? (
+            <p className={styles.error} role="alert">
+              {assistantErrorMessage(error)}
+            </p>
+          ) : null}
+          {busy ? (
+            <p className={styles.progress} role="status">
+              <LoaderCircle className="spin" size={14} aria-hidden="true" />
+              {currentStage ? workflowStageLabel(currentStage) : "응답 준비 중"}
+            </p>
+          ) : null}
+          <form
+            className={styles.composer}
+            onSubmit={(event) => {
+              event.preventDefault();
+              submit();
+            }}
+          >
             <textarea
+              ref={inputRef}
               value={input}
-              onChange={(event) => setInput(event.target.value.slice(0, 2_000))}
+              maxLength={2_000}
+              rows={1}
+              onChange={(event) => setInput(event.target.value)}
               onKeyDown={(event) => {
                 if (
                   event.key === "Enter" &&
@@ -175,86 +308,109 @@ export function AssistantWorkspace({
                   submit();
                 }
               }}
-              placeholder="현재 세무 업무의 자료에 대해 질문해 주세요…"
+              placeholder="세무 업무에 대해 질문해 주세요"
               aria-label="AI에게 질문"
-              rows={2}
+              aria-describedby="assistant-draft-notice"
             />
-            <div className="composer-actions">
+            <div className={styles.composerActions}>
               <div>
                 <button
                   type="button"
-                  aria-label="파일 첨부"
-                  title="파일 첨부는 문서 보관함에서 할 수 있습니다."
+                  aria-label="자료 첨부"
+                  onClick={() => setAttachmentOpen(true)}
                 >
-                  <Paperclip size={16} />
+                  <Paperclip size={19} aria-hidden="true" />
                 </button>
-                <span>{input.length}/2,000</span>
+                <span>{input.length.toLocaleString("ko-KR")}/2,000</span>
               </div>
               {busy ? (
                 <button
-                  className="send-button send-button-stop"
+                  className={styles.send}
                   type="button"
                   onClick={stop}
                   aria-label="응답 중지"
                 >
-                  <Square size={13} fill="currentColor" />
+                  <Square size={15} fill="currentColor" />
                 </button>
               ) : (
                 <button
-                  className="send-button"
-                  type="button"
-                  onClick={() => submit()}
+                  className={styles.send}
+                  type="submit"
                   disabled={!input.trim()}
                   aria-label="질문 보내기"
                 >
-                  <ArrowUp size={16} />
+                  <ArrowUp size={20} />
                 </button>
               )}
             </div>
-          </div>
-          <div className="composer-note">
-            <span>
-              <ShieldCheck size={11} /> 전문가 검토 전 초안
+          </form>
+          <div className={styles.note}>
+            <span id="assistant-draft-notice">
+              <ShieldCheck size={13} aria-hidden="true" /> 전문가 검토 전 초안
             </span>
-            <span>AI 결과는 전문가 검토가 필요합니다.</span>
             {messages.length ? (
               <button
                 type="button"
-                onClick={() => void regenerate()}
+                onClick={() => {
+                  followResponse.current = true;
+                  void regenerate();
+                }}
                 disabled={busy}
               >
-                <RefreshCw size={11} /> 마지막 답변 다시 생성
+                <RefreshCw size={13} aria-hidden="true" /> 다시 생성
               </button>
-            ) : null}
+            ) : (
+              <span className={styles.keyboardHint}>Shift + Enter 줄바꿈</span>
+            )}
           </div>
         </div>
       </section>
 
-      <aside className="assistant-evidence-panel">
-        <div className="evidence-panel-header">
-          <div>
-            <span className="card-kicker">근거 검색 범위</span>
-            <h2>참고 근거</h2>
-          </div>
-          <SearchCheck size={18} />
-        </div>
-        <div className="evidence-scope">
-          <div>
-            <span>검색 범위</span>
-            <strong>현재 업무 자료 및 승인된 세무 지식</strong>
-          </div>
-          <div>
-            <span>조직 데이터 범위</span>
-            <strong>
-              <Check size={11} /> 현재 조직으로 제한
-            </strong>
-          </div>
-        </div>
-        <div className="evidence-panel-list">
+      <aside
+        className={`${styles.evidence} assistant-evidence-panel`}
+        id="assistant-panel-evidence"
+        aria-label="응답 참고 근거"
+        tabIndex={0}
+      >
+        <header className={styles.evidenceHeader}>
+          <h2>참고 근거</h2>
+          <SearchCheck size={20} aria-hidden="true" />
+        </header>
+        <details className={styles.scope}>
+          <summary>
+            <ShieldCheck size={15} aria-hidden="true" /> 검색 범위와 AI 실행
+            정보
+          </summary>
+          <dl>
+            <div>
+              <dt>검색 범위</dt>
+              <dd>현재 업무 자료 및 승인된 세무 지식</dd>
+            </div>
+            <div>
+              <dt>자료 조회 범위</dt>
+              <dd>현재 조직의 자료만 조회</dd>
+            </div>
+            <div>
+              <dt>실행 상태</dt>
+              <dd>
+                {busy && currentStage
+                  ? workflowStageLabel(currentStage)
+                  : busy
+                    ? "응답 준비 중"
+                    : "실행 준비"}
+              </dd>
+            </div>
+          </dl>
+          <p>
+            근거가 부족하면 답변을 보류합니다. 모든 결과는 전문가 검토 전
+            초안입니다.
+          </p>
+        </details>
+        <div className={styles.evidenceList}>
           {panelEvidence.map((item, index) => (
             <article key={item.id}>
-              <div className="evidence-panel-title">
-                <span>0{index + 1}</span>
+              <div className={styles.evidenceTitle}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
                 <div>
                   <strong>{item.documentName}</strong>
                   <small>{item.location}</small>
@@ -278,9 +434,9 @@ export function AssistantWorkspace({
             </div>
           ) : null}
         </div>
-        <div className="evidence-panel-footer">
+        <footer className={styles.evidenceFooter}>
           <div>
-            <ShieldCheck size={15} />
+            <ShieldCheck size={17} aria-hidden="true" />
             <span>
               <strong>근거 검증</strong>
               {latestVerification
@@ -289,13 +445,29 @@ export function AssistantWorkspace({
             </span>
           </div>
           <div>
-            <CircleDollarSign size={15} />
+            <CircleDollarSign size={17} aria-hidden="true" />
             <span>
               <strong>응답 한도</strong>응답당 최대 300원 · 최대 8단계
             </span>
           </div>
-        </div>
+          <Link href={`/documents?matter=${matter.id}`}>
+            업무 자료 전체 보기 <ChevronRight size={14} aria-hidden="true" />
+          </Link>
+        </footer>
       </aside>
+
+      <Dialog
+        open={attachmentOpen}
+        title="현재 업무에 자료 추가"
+        onClose={() => setAttachmentOpen(false)}
+        closeDisabled={uploadBusy}
+        closeLabel="자료 첨부 닫기"
+      >
+        <p className={styles.attachmentContext}>
+          {matter.client} · {matter.taxType}
+        </p>
+        <UploadPanel matterId={matter.id} onBusyChange={setUploadBusy} />
+      </Dialog>
     </div>
   );
 }

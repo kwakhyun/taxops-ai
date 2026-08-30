@@ -39,6 +39,7 @@ export default async function AssistantPage({ searchParams }: Props) {
 
   return (
     <AssistantWorkspace
+      key={matter.id}
       matter={matter}
       userName={user.name}
       userInitials={user.initials}

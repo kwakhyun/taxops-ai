@@ -28,7 +28,8 @@ export function ReviewWorkspace({
   return (
     <div className="review-layout">
       <ReviewRequestList
-        requests={requests}
+        requests={workspace.currentRequests}
+        disabled={Boolean(workspace.acting)}
         selectedId={workspace.selected.targetId}
         onSelect={workspace.selectRequest}
       />

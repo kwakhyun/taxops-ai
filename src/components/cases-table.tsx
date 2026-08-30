@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronRight, Filter, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { StatusPill } from "@/components/status-pill";
+import { TableViewport } from "@/components/table-viewport";
 import type { Matter, RiskLevel } from "@/lib/domain/types";
 
 const riskFilters: Array<{ value: RiskLevel | "ALL"; label: string }> = [
@@ -62,8 +63,8 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
       </div>
 
       {filtered.length ? (
-        <div className="table-wrap">
-          <table className="data-table cases-table">
+        <TableViewport label="세무 업무 목록">
+          <table className="data-table cases-table responsive-table">
             <thead>
               <tr>
                 <th>세무 업무</th>
@@ -72,13 +73,15 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
                 <th>리스크</th>
                 <th>근거 충족률</th>
                 <th>마감일</th>
-                <th aria-label="열기" />
+                <th>
+                  <span className="sr-only">업무 열기</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((matter) => (
                 <tr key={matter.id}>
-                  <td>
+                  <td className="record-primary" data-label="세무 업무">
                     <Link
                       className="case-identity"
                       href={`/cases/${matter.id}`}
@@ -94,20 +97,20 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
                       </span>
                     </Link>
                   </td>
-                  <td>
+                  <td data-label="담당자 · 검토자">
                     <span className="owner-pair">
                       <span>{matter.owner}</span>
                       <ChevronRight size={11} />
                       <span>{matter.reviewer}</span>
                     </span>
                   </td>
-                  <td>
+                  <td data-label="상태">
                     <StatusPill status={matter.status} />
                   </td>
-                  <td>
+                  <td data-label="리스크">
                     <StatusPill status={matter.risk} />
                   </td>
-                  <td>
+                  <td data-label="근거 충족률">
                     <div className="coverage-cell">
                       <strong>{matter.evidenceCoverage}%</strong>
                       <div className="progress-track">
@@ -118,10 +121,10 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td data-label="마감일">
                     <span className="due-date">{matter.dueDate}</span>
                   </td>
-                  <td>
+                  <td className="record-action" data-label="열기">
                     <Link
                       className="row-open"
                       href={`/cases/${matter.id}`}
@@ -134,7 +137,7 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableViewport>
       ) : (
         <div className="empty-state">
           <div>

@@ -12,6 +12,7 @@ import {
   CircleAlert,
   Clock3,
   Download,
+  FileCheck2,
   FileSpreadsheet,
   FileText,
   MessageSquareText,
@@ -21,6 +22,7 @@ import {
   Upload,
   UserRoundCheck,
 } from "lucide-react";
+import { EngagementJourney } from "@/components/engagement-journey";
 import { StatusPill } from "@/components/status-pill";
 import { getSessionUser } from "@/lib/auth/session";
 import { workflowSteps } from "@/lib/domain/fixtures";
@@ -64,6 +66,46 @@ export default async function CaseDetailPage({ params }: Props) {
     }));
   const documentsHref = `/documents?matter=${encodeURIComponent(matter.id)}`;
   const assistantHref = `/assistant?matter=${encodeURIComponent(matter.id)}`;
+  const engagementReference = `ENG-${matter.id
+    .replaceAll(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 8)
+    .toLocaleUpperCase()}`;
+  const filingChecklist = [
+    {
+      label: "필수 자료 수집",
+      helper: matterDocuments.length
+        ? `${matterDocuments.length}건 연결됨`
+        : "자료 등록 필요",
+      complete: matterDocuments.length > 0,
+    },
+    {
+      label: "근거 기반 분석",
+      helper: latestRun
+        ? `근거 충족률 ${latestRun.evidenceCoverage}%`
+        : "분석 실행 필요",
+      complete: Boolean(latestRun),
+    },
+    {
+      label: "전문가 검토·승인",
+      helper:
+        workpaper?.reviewStatus === "APPROVED"
+          ? "승인 완료"
+          : workpaper
+            ? "검토 대기"
+            : "검토조서 필요",
+      complete: workpaper?.reviewStatus === "APPROVED",
+    },
+    {
+      label: "실행 이력·감사 추적",
+      helper: latestRun?.traceId
+        ? `추적 ID ${latestRun.traceId}`
+        : "실행 이력 대기",
+      complete: Boolean(latestRun?.traceId),
+    },
+  ];
+  const completedFilingChecks = filingChecklist.filter(
+    (item) => item.complete,
+  ).length;
 
   return (
     <>
@@ -77,6 +119,7 @@ export default async function CaseDetailPage({ params }: Props) {
             {matter.client.slice(0, 1)}
           </span>
           <div>
+            <span className="engagement-reference">{engagementReference}</span>
             <div className="case-title-row">
               <h1>{matter.client}</h1>
               <StatusPill status={matter.status} />
@@ -121,25 +164,30 @@ export default async function CaseDetailPage({ params }: Props) {
         </div>
       </section>
 
+      <EngagementJourney matter={matter} />
+
       <nav className="tabs case-tabs" aria-label="세무 업무 세부 메뉴">
         <Link className="tab tab-active" href={`/cases/${matter.id}`}>
-          개요
+          업무 개요
         </Link>
         <Link className="tab" href={documentsHref}>
-          자료 <span className="tab-count">{matterDocuments.length}</span>
+          자료 수집 <span className="tab-count">{matterDocuments.length}</span>
         </Link>
         <Link className="tab" href={assistantHref}>
-          AI 분석 <span className="tab-count">{latestRun ? 1 : 0}</span>
+          근거 검토 <span className="tab-count">{latestRun ? 1 : 0}</span>
+        </Link>
+        <Link className="tab" href={`${assistantHref}#analysis-workspace`}>
+          계산 및 초안
         </Link>
         <Link className="tab" href="/reviews">
-          검토조서
+          검토 및 승인
         </Link>
-        <Link className="tab" href="/audit">
-          활동 로그
+        <Link className="tab" href="#filing">
+          신고 및 사후 관리
         </Link>
       </nav>
 
-      <section className="case-layout">
+      <section className="case-layout" id="engagement-overview">
         <div className="case-main-column">
           {hasAnalysis && workpaper ? (
             <article className="card finding-card">
@@ -216,7 +264,7 @@ export default async function CaseDetailPage({ params }: Props) {
               <div className="card-header">
                 <div>
                   <span className="card-kicker">근거 기반 분석</span>
-                  <h2>분석을 시작할 준비가 필요합니다</h2>
+                  <h2>아직 AI 분석 결과가 없습니다.</h2>
                   <p>이 업무에는 아직 검증된 AI 분석 결과가 없습니다.</p>
                 </div>
                 <span className="status-pill status-neutral">자료 대기</span>
@@ -268,7 +316,7 @@ export default async function CaseDetailPage({ params }: Props) {
                     <StatusPill status={document.status} />
                     <span className="document-chunks">
                       {document.chunks
-                        ? `검색 단위 ${document.chunks.toLocaleString("ko-KR")}개`
+                        ? `문서 구간 ${document.chunks.toLocaleString("ko-KR")}개`
                         : "처리 중"}
                     </span>
                     {document.status === "INDEXED" ? (
@@ -283,10 +331,12 @@ export default async function CaseDetailPage({ params }: Props) {
                     ) : (
                       <span
                         className="row-open row-open-disabled"
-                        aria-label={`${document.name} 다운로드 준비 중`}
                         title="내용 처리가 완료되면 다운로드할 수 있습니다."
                       >
-                        <Download size={15} />
+                        <Download size={15} aria-hidden="true" />
+                        <span className="sr-only">
+                          {document.name} 다운로드 준비 중
+                        </span>
                       </span>
                     )}
                   </div>
@@ -300,6 +350,58 @@ export default async function CaseDetailPage({ params }: Props) {
                   </div>
                 </div>
               ) : null}
+            </div>
+          </article>
+
+          <article className="card filing-readiness-card" id="filing">
+            <div className="card-header">
+              <div>
+                <span className="card-kicker">Filing readiness</span>
+                <h2>신고 전 최종 점검</h2>
+                <p>
+                  신고 전에 자료 준비, 근거 확인, 검토 승인과 이력 기록 상태를
+                  확인합니다.
+                </p>
+              </div>
+              <span className="filing-readiness-score">
+                {completedFilingChecks}/{filingChecklist.length}
+              </span>
+            </div>
+            <div className="filing-checklist">
+              {filingChecklist.map((item) => (
+                <div
+                  className={
+                    item.complete
+                      ? "filing-check filing-check-complete"
+                      : "filing-check"
+                  }
+                  key={item.label}
+                >
+                  <span aria-hidden="true">
+                    {item.complete ? (
+                      <Check size={14} />
+                    ) : (
+                      <FileCheck2 size={14} />
+                    )}
+                  </span>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <small>{item.helper}</small>
+                  </div>
+                  <em>{item.complete ? "완료" : "확인 필요"}</em>
+                </div>
+              ))}
+            </div>
+            <div className="filing-readiness-footer">
+              <span>
+                AI 초안은 전문가 승인 후에만 신고 자료로 확정할 수 있습니다.
+              </span>
+              <Link
+                className="button button-primary button-compact"
+                href="/reviews"
+              >
+                검토 및 승인 확인 <ArrowRight size={14} />
+              </Link>
             </div>
           </article>
         </div>
@@ -403,7 +505,7 @@ export default async function CaseDetailPage({ params }: Props) {
               <strong>{matter.reviewer}</strong>
               <p>
                 {hasAnalysis
-                  ? "저장된 결론과 근거의 전문가 판단을 확인합니다."
+                  ? "검토자가 결론과 근거를 확인한 결과를 조회합니다."
                   : "분석 초안이 생성되면 검토를 요청합니다."}
               </p>
             </div>

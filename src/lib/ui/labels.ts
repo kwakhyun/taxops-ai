@@ -89,6 +89,9 @@ const toolStateLabels: Record<string, string> = {
   "input-available": "실행 중",
   "output-available": "완료",
   "output-error": "실패",
+  "output-denied": "실행 거부",
+  "approval-requested": "승인 대기",
+  "approval-responded": "승인 응답 확인",
 };
 
 const reviewVerdictLabels: Record<string, string> = {

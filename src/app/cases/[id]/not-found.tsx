@@ -8,7 +8,7 @@ export default function CaseNotFound() {
         <span className="empty-state-icon">
           <BriefcaseBusiness size={22} />
         </span>
-        <h3>세무 업무를 찾을 수 없습니다.</h3>
+        <h1>세무 업무를 찾을 수 없습니다.</h1>
         <p>
           삭제되었거나 현재 업무 공간에서 접근할 권한이 없는 세무 업무입니다.
         </p>

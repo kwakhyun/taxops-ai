@@ -14,7 +14,7 @@ test.describe("TaxOps AI critical user journeys", () => {
     test.setTimeout(60_000);
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { name: "오늘의 세무 업무" }),
+      page.getByRole("heading", { name: "오늘 처리할 세무 업무" }),
     ).toBeVisible();
 
     await page
@@ -131,7 +131,9 @@ test.describe("TaxOps AI critical user journeys", () => {
     const composer = page.getByLabel("AI에게 질문");
     await composer.fill("상속세가업승계 요건을 알려줘");
     await page.getByRole("button", { name: "질문 보내기" }).click();
-    await expect(page.getByText(/답변을 보류합니다/)).toBeVisible({
+    await expect(
+      page.getByRole("log").getByText(/답변을 보류합니다/),
+    ).toBeVisible({
       timeout: 15_000,
     });
     await expect(page.locator(".assistant-evidence-panel")).toContainText(

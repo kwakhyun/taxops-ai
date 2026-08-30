@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
       ? ".next-e2e"
       : ".next",
   ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
+  devIndicators: false,
   allowedDevOrigins: ["127.0.0.1"],
   poweredByHeader: false,
   reactStrictMode: true,

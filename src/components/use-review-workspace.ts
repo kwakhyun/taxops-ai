@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ReviewDecision } from "@/components/review-workspace-model";
 import type { ReviewRequest } from "@/lib/workpapers/artifact";
 
 export function useReviewWorkspace(requests: ReviewRequest[]) {
   const [selectedId, setSelectedId] = useState(requests[0]?.targetId);
   const [acting, setActing] = useState<"APPROVED" | "REJECTED">();
-  const [decision, setDecision] = useState<ReviewDecision>();
+  const [decisions, setDecisions] = useState<Record<string, ReviewDecision>>(
+    {},
+  );
+  const decisionLock = useRef(false);
   const [note, setNote] = useState("");
   const [message, setMessage] = useState(
     "현재 버전과 출처 이력을 시스템이 확인한 뒤 검토 결과를 기록합니다.",
@@ -16,20 +19,33 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
     () => requests.find((item) => item.targetId === selectedId),
     [requests, selectedId],
   );
+  const decision = selectedId ? decisions[selectedId] : undefined;
+  const currentRequests = requests.map((request) => ({
+    ...request,
+    status: decisions[request.targetId]?.decision ?? request.status,
+  }));
+
+  function recordDecision(targetId: string, value: ReviewDecision) {
+    setDecisions((current) => ({ ...current, [targetId]: value }));
+  }
 
   function selectRequest(targetId: string) {
+    if (decisionLock.current) return;
     setSelectedId(targetId);
-    setDecision(undefined);
     setNote("");
+    setMessage(
+      "현재 버전과 출처 이력을 시스템이 확인한 뒤 검토 결과를 기록합니다.",
+    );
   }
 
   async function decide(nextDecision: "APPROVED" | "REJECTED") {
-    if (!selected) return;
+    if (!selected || decisionLock.current) return;
     const normalizedNote = note.trim();
     if (normalizedNote.length < 4) {
       setMessage("검토 근거가 남도록 의견을 4자 이상 입력해 주세요.");
       return;
     }
+    decisionLock.current = true;
     setActing(nextDecision);
     setMessage("");
     try {
@@ -43,7 +59,7 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
         error?: { message: string };
       };
       if (tokenPayload.data?.decision) {
-        setDecision(tokenPayload.data.decision);
+        recordDecision(selected.targetId, tokenPayload.data.decision);
         setMessage("이미 처리된 검토 요청입니다.");
         return;
       }
@@ -71,7 +87,7 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
       if (!response.ok || !payload.data) {
         throw new Error(payload.error?.message ?? "검토 처리 실패");
       }
-      setDecision(payload.data);
+      recordDecision(selected.targetId, payload.data);
       setMessage(
         nextDecision === "APPROVED"
           ? "검토조서를 승인했습니다."
@@ -84,11 +100,13 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
           : "검토 결정을 저장하지 못했습니다.",
       );
     } finally {
+      decisionLock.current = false;
       setActing(undefined);
     }
   }
 
   return {
+    currentRequests,
     selected,
     acting,
     decision,

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TableViewport } from "@/components/table-viewport";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -120,7 +121,7 @@ export default async function OperationsPage() {
           <div className="card-header">
             <div>
               <h2>요청 지연 시간</h2>
-              <p>최근 12시간 p50 / p95</p>
+              <p>24시간, 2시간 간격 · 상대 지연 수준 예시</p>
             </div>
             <div className="chart-legend">
               <span className="legend-green">p50</span>
@@ -297,8 +298,8 @@ export default async function OperationsPage() {
             감사 로그에서 보기
           </Link>
         </div>
-        <div className="table-wrap">
-          <table className="data-table">
+        <TableViewport label="최근 요청 추적">
+          <table className="data-table responsive-table">
             <thead>
               <tr>
                 <th>추적 ID</th>
@@ -313,26 +314,26 @@ export default async function OperationsPage() {
             <tbody>
               {traces.map((trace) => (
                 <tr key={trace.id}>
-                  <td>
+                  <td data-label="추적 ID">
                     <code className="trace-id">{trace.id}</code>
                   </td>
-                  <td>{trace.route}</td>
-                  <td>
+                  <td data-label="경로">{trace.route}</td>
+                  <td data-label="상태">
                     <span
                       className={`http-status http-status-${trace.status >= 400 ? "error" : "ok"}`}
                     >
                       {trace.status}
                     </span>
                   </td>
-                  <td>{trace.latency}</td>
-                  <td>{trace.model}</td>
-                  <td>{trace.cost}</td>
-                  <td>{trace.time}</td>
+                  <td data-label="지연 시간">{trace.latency}</td>
+                  <td data-label="모델">{trace.model}</td>
+                  <td data-label="비용">{trace.cost}</td>
+                  <td data-label="시각">{trace.time}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </TableViewport>
         <div className="observability-note">
           <TriangleAlert size={13} />
           <span>

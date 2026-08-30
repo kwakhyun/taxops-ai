@@ -84,7 +84,12 @@ export function ReviewDocument({
               {calculations.length ? (
                 calculations.flatMap((calculation, calculationIndex) =>
                   Object.entries(calculation).map(([label, value]) => (
-                    <div key={calculationIndex + "-" + label}>
+                    <div
+                      key={calculationIndex + "-" + label}
+                      className={
+                        label === "formula" ? "calculation-formula" : undefined
+                      }
+                    >
                       <span>{calculationLabel(label)}</span>
                       <strong>{calculationValue(label, value)}</strong>
                     </div>
@@ -148,6 +153,7 @@ export function ReviewDocument({
           <span>검토 의견</span>
           <textarea
             aria-label="검토 의견"
+            aria-describedby="review-note-hint"
             value={note}
             onChange={(event) => onNoteChange(event.target.value)}
             placeholder="승인 또는 반려의 근거를 기록해 주세요."
@@ -157,6 +163,9 @@ export function ReviewDocument({
             disabled={Boolean(acting) || selected.stale}
           />
           <small>{note.length}/800</small>
+          <small id="review-note-hint" className="review-note-hint">
+            승인 또는 반려하려면 검토 의견을 4자 이상 입력해 주세요.
+          </small>
         </label>
       ) : null}
       <div className="review-actions">
@@ -164,7 +173,7 @@ export function ReviewDocument({
           <span className="reviewer-avatar">{reviewerName.slice(0, 1)}</span>
           <span>
             <strong>{reviewerName} · 검토자</strong>
-            <small>{message}</small>
+            <small role="status">{message}</small>
           </span>
         </div>
         {!decision && selected.status === "PENDING" ? (

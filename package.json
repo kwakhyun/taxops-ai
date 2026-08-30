@@ -22,6 +22,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:update": "playwright test tests/e2e/visual-accessibility.spec.ts --update-snapshots=all",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "worker": "node --import tsx src/worker/index.ts",
@@ -50,6 +51,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@modelcontextprotocol/client": "^2.0.0",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.4.0",

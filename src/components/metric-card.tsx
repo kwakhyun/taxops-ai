@@ -26,11 +26,11 @@ export function MetricCard({
     <article className="metric-card">
       <div className="metric-card-top">
         <span className={`metric-icon metric-icon-${tone}`}>
-          <Icon size={19} strokeWidth={1.8} />
+          <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
         </span>
         {trend ? (
           <span className={`metric-trend metric-trend-${trendDirection}`}>
-            <TrendIcon size={13} /> {trend}
+            <TrendIcon size={13} aria-hidden="true" /> {trend}
           </span>
         ) : null}
       </div>

@@ -22,8 +22,13 @@ export default function ErrorPage({
       <h1>화면을 불러오지 못했습니다.</h1>
       <p>
         입력 내용은 다시 전송하지 않았습니다. 잠시 후 재시도하고 문제가 계속되면
-        요청 ID와 함께 관리자에게 문의해 주세요.
+        관리자에게 문의해 주세요.
       </p>
+      {error.digest ? (
+        <p>
+          오류 코드: <code>{error.digest}</code>
+        </p>
+      ) : null}
       <button className="button button-primary" type="button" onClick={reset}>
         <RotateCcw size={15} /> 다시 시도
       </button>

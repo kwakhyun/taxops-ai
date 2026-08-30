@@ -5,10 +5,12 @@ export function ReviewRequestList({
   requests,
   selectedId,
   onSelect,
+  disabled = false,
 }: {
   requests: ReviewRequest[];
   selectedId: string;
   onSelect: (targetId: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <section className="review-inbox card">
@@ -30,6 +32,8 @@ export function ReviewRequestList({
             }
             key={request.targetId}
             type="button"
+            disabled={disabled}
+            aria-pressed={request.targetId === selectedId}
             onClick={() => onSelect(request.targetId)}
           >
             <span className="review-list-icon">
@@ -41,6 +45,11 @@ export function ReviewRequestList({
               </strong>
               <small>
                 검토조서 버전 {request.version} · 요청자 {request.requestedBy}
+                {request.status === "APPROVED"
+                  ? " · 승인 완료"
+                  : request.status === "REJECTED"
+                    ? " · 반려 완료"
+                    : ""}
               </small>
             </span>
             <ChevronRight size={15} />

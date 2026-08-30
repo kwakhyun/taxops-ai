@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TableViewport } from "@/components/table-viewport";
 import { notFound } from "next/navigation";
 import {
   Check,
@@ -40,6 +41,14 @@ const qualityScore = Number(
   ).toFixed(1),
 );
 
+const qualityMetrics = [
+  { key: "retrievalRecallAt5", label: "검색 재현율" },
+  { key: "generatedCitationSupport", label: "답변 근거 일치율" },
+  { key: "claimIntegrityAdversarialPassRate", label: "주장 무결성" },
+  { key: "abstentionAccuracy", label: "답변 보류 정확도" },
+  { key: "injectionBlockRate", label: "공격 차단률" },
+] as const;
+
 export default async function EvaluationsPage() {
   const user = await getSessionUser();
   if (!can(user, "audit:read")) notFound();
@@ -50,8 +59,9 @@ export default async function EvaluationsPage() {
         title="AI 품질 평가"
         description="버전 관리된 기준 평가 데이터셋과 재현 가능한 AI 실행으로 근거 검색, 답변의 근거 일치, 답변 보류, 공격 차단, 개인정보 노출을 회귀 검증합니다."
         actions={
-          <span className="button button-secondary">
-            <FlaskConical size={15} /> npm run eval
+          <span className="evaluation-command">
+            <FlaskConical size={15} aria-hidden="true" /> 평가 실행:{" "}
+            <code>npm run eval</code>
           </span>
         }
       />
@@ -65,12 +75,13 @@ export default async function EvaluationsPage() {
             <span className="card-kicker">재현 가능한 배포 품질 기준</span>
             <h2>
               {report.passed
-                ? "현재 코드가 배포 품질 기준을 충족했습니다."
-                : "현재 코드가 배포 품질 기준을 충족하지 못했습니다."}
+                ? "이번 AI 평가가 통과 기준을 충족했습니다."
+                : "이번 AI 평가가 통과 기준을 충족하지 못했습니다."}
             </h2>
             <p>
-              커밋된 평가 사례 {report.datasetSize}개 중 {report.passedCases}개
-              통과했습니다. 결과는 CI 결과물과 JSON 보고서로 보존됩니다.
+              버전 관리 중인 평가 사례 {report.datasetSize}개 중{" "}
+              {report.passedCases}개 통과했습니다. 결과는 CI 결과물과 JSON
+              보고서로 보존됩니다.
             </p>
           </div>
         </div>
@@ -130,8 +141,8 @@ export default async function EvaluationsPage() {
         <article className="card eval-trend-card">
           <div className="card-header">
             <div>
-              <h2>현재 품질 기준</h2>
-              <p>실행 시점의 코드와 버전 관리 데이터로 산정합니다.</p>
+              <h2>지표별 평가 결과</h2>
+              <p>0~100% · 저장된 평가 보고서의 측정값과 통과 기준입니다.</p>
             </div>
             <span
               className={`status-pill ${report.passed ? "status-success" : "status-danger"}`}
@@ -139,23 +150,26 @@ export default async function EvaluationsPage() {
               {report.passed ? "통과" : "실패"}
             </span>
           </div>
-          <div className="eval-bars">
-            {[
-              ["검색", report.metrics.retrievalRecallAt5],
-              ["근거 일치", report.metrics.generatedCitationSupport],
-              ["주장 무결성", report.metrics.claimIntegrityAdversarialPassRate],
-              ["보류", report.metrics.abstentionAccuracy],
-              ["차단", report.metrics.injectionBlockRate],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <span style={{ height: `${Number(value) - 40}%` }}>
-                  <em>{value}</em>
-                </span>
-                <small>{label}</small>
-              </div>
+          <ul className="quality-metrics">
+            {qualityMetrics.map(({ key, label }) => (
+              <li key={key}>
+                <div>
+                  <strong>{label}</strong>
+                  <b>{report.metrics[key]}%</b>
+                </div>
+                <meter
+                  aria-label={label}
+                  min={0}
+                  max={100}
+                  low={report.thresholds[key]}
+                  high={100}
+                  optimum={100}
+                  value={report.metrics[key]}
+                />
+                <small>통과 기준 {report.thresholds[key]}% 이상</small>
+              </li>
             ))}
-            <i className="eval-threshold">최소 통과 기준 90</i>
-          </div>
+          </ul>
         </article>
 
         <article className="card version-card">
@@ -201,16 +215,16 @@ export default async function EvaluationsPage() {
           <div>
             <h2>대표 평가 결과</h2>
             <p>
-              근거가 충분한 질의, 근거가 부족한 질의, 공격성 질의를 구분해
-              검증합니다.
+              근거가 충분한 질의, 근거가 부족한 질의, 보안 정책 우회를 시도하는
+              질의를 구분해 검증합니다.
             </p>
           </div>
           <span className="result-count">
             {report.datasetSize}개 사례 중 {report.passedCases}개 통과
           </span>
         </div>
-        <div className="table-wrap">
-          <table className="data-table">
+        <TableViewport label="대표 평가 결과">
+          <table className="data-table responsive-table">
             <thead>
               <tr>
                 <th>ID</th>
@@ -223,17 +237,17 @@ export default async function EvaluationsPage() {
             <tbody>
               {representativeCases.map((item) => (
                 <tr key={item.id}>
-                  <td>
+                  <td data-label="ID">
                     <code className="trace-id">{item.id}</code>
                   </td>
-                  <td>{categoryLabel[item.category]}</td>
-                  <td>{item.query}</td>
-                  <td>
+                  <td data-label="유형">{categoryLabel[item.category]}</td>
+                  <td data-label="질의">{item.query}</td>
+                  <td data-label="검색된 근거">
                     {item.retrievedIds.length
                       ? item.retrievedIds.join(", ")
                       : "검색 근거 없음"}
                   </td>
-                  <td>
+                  <td data-label="결과">
                     <span className="eval-pass">
                       <Check size={11} /> {item.pass ? "통과" : "실패"}
                     </span>
@@ -242,7 +256,7 @@ export default async function EvaluationsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableViewport>
         <div className="eval-method-note">
           <ShieldCheck size={13} />
           <span>

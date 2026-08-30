@@ -11,18 +11,13 @@ import {
   LayoutDashboard,
   LoaderCircle,
   Search,
+  ScrollText,
   ShieldCheck,
   X,
   type LucideIcon,
 } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Dialog } from "@/components/dialog";
 import type { Matter, Permission } from "@/lib/domain/types";
 
 interface SearchItem {
@@ -98,6 +93,15 @@ const destinations: SearchItem[] = [
     icon: ShieldCheck,
     permission: "audit:read",
   },
+  {
+    id: "audit",
+    href: "/audit",
+    label: "감사 로그",
+    description: "사용자 작업과 보안 통제 이력을 조회합니다.",
+    keywords: "감사 로그 이력 추적 기록",
+    icon: ScrollText,
+    permission: "audit:read",
+  },
 ];
 
 function matterSearchItem(matter: Matter): SearchItem {
@@ -122,7 +126,7 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
   const canReadCases = permissions.includes("case:read");
 
   const loadMatters = useCallback(async () => {
-    if (matters || loading || !canReadCases) return;
+    if (loading || !canReadCases) return;
     setLoading(true);
     setError("");
     try {
@@ -142,7 +146,7 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
     } finally {
       setLoading(false);
     }
-  }, [canReadCases, loading, matters]);
+  }, [canReadCases, loading]);
 
   const openSearch = useCallback(() => {
     setOpen(true);
@@ -159,37 +163,11 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
         } else {
           openSearch();
         }
-      } else if (event.key === "Escape") {
-        setOpen(false);
-        setQuery("");
       }
     };
     window.addEventListener("keydown", toggle);
     return () => window.removeEventListener("keydown", toggle);
   }, [open, openSearch]);
-
-  useEffect(() => {
-    if (!open) return;
-    const trigger = triggerRef.current;
-    const previous = document.body.style.overflow;
-    const background = Array.from(
-      document.querySelectorAll<HTMLElement>(
-        ".sidebar, .page-canvas, .topbar-actions, .mobile-menu, .command-search",
-      ),
-    );
-    const previousInert = background.map((element) => element.inert);
-    document.body.style.overflow = "hidden";
-    background.forEach((element) => {
-      element.inert = true;
-    });
-    return () => {
-      document.body.style.overflow = previous;
-      background.forEach((element, index) => {
-        element.inert = previousInert[index] ?? false;
-      });
-      trigger?.focus();
-    };
-  }, [open]);
 
   const results = useMemo(() => {
     const allowedDestinations = destinations.filter(
@@ -215,24 +193,6 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
     setQuery("");
   }
 
-  function trapFocus(event: ReactKeyboardEvent<HTMLElement>) {
-    if (event.key !== "Tab") return;
-    const focusable = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      ),
-    );
-    const first = focusable.at(0);
-    const last = focusable.at(-1);
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last?.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first?.focus();
-    }
-  }
-
   return (
     <>
       <button
@@ -241,6 +201,7 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-label="세무 업무, 자료, 고객사 검색"
         onClick={openSearch}
       >
         <Search size={17} aria-hidden="true" />
@@ -248,96 +209,98 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
         <kbd>⌘ K</kbd>
       </button>
 
-      {open ? (
-        <div className="command-palette-layer">
-          <button
-            className="command-palette-backdrop"
-            type="button"
-            aria-label="통합 검색 닫기"
-            onClick={close}
-          />
-          <section
-            className="command-palette"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="command-palette-title"
-            onKeyDown={trapFocus}
-          >
-            <header className="command-palette-header">
-              <Search size={18} aria-hidden="true" />
-              <label htmlFor="command-palette-input" className="sr-only">
-                통합 검색어
-              </label>
-              <input
-                id="command-palette-input"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  const first = results[0];
-                  if (event.key === "Enter" && first) {
-                    event.preventDefault();
-                    close();
-                    router.push(first.href);
-                  }
-                }}
-                placeholder="고객사, 세목, 화면 이름 검색"
-                autoComplete="off"
-                autoFocus
-              />
-              <button
-                className="icon-button"
-                type="button"
-                aria-label="통합 검색 닫기"
-                onClick={close}
-              >
-                <X size={16} />
-              </button>
-            </header>
-            <h2 id="command-palette-title" className="sr-only">
-              통합 검색
-            </h2>
-            <div className="command-palette-results" aria-live="polite">
-              {loading ? (
-                <div className="command-palette-state" role="status">
-                  <LoaderCircle className="spin" size={17} /> 검색 대상을
-                  불러오는 중입니다.
-                </div>
-              ) : null}
-              {error ? (
-                <div
-                  className="command-palette-state command-palette-error"
-                  role="alert"
-                >
-                  {error}
-                </div>
-              ) : null}
-              {!loading && results.length === 0 ? (
-                <div className="command-palette-state">
-                  일치하는 항목이 없습니다.
-                </div>
-              ) : null}
-              {results.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link key={item.id} href={item.href} onClick={close}>
-                    <span className="command-result-icon">
-                      <Icon size={16} aria-hidden="true" />
-                    </span>
-                    <span>
-                      <strong>{item.label}</strong>
-                      <small>{item.description}</small>
-                    </span>
-                  </Link>
-                );
-              })}
+      <Dialog
+        returnFocusRef={triggerRef}
+        open={open}
+        title="통합 검색"
+        onClose={close}
+        className="command-dialog"
+        header={
+          <header className="command-palette-header">
+            <Search size={18} aria-hidden="true" />
+            <label htmlFor="command-palette-input" className="sr-only">
+              통합 검색어
+            </label>
+            <input
+              id="command-palette-input"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                const first = results[0];
+                if (
+                  event.key === "Enter" &&
+                  !event.nativeEvent.isComposing &&
+                  first
+                ) {
+                  event.preventDefault();
+                  close();
+                  router.push(first.href);
+                }
+              }}
+              placeholder="고객사, 세목, 화면 이름 검색"
+              autoComplete="off"
+              autoFocus
+            />
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="통합 검색 닫기"
+              onClick={close}
+            >
+              <X size={16} />
+            </button>
+          </header>
+        }
+        footer={
+          <footer className="command-palette-footer">
+            <span>Esc 닫기</span>
+            <span>Enter 열기</span>
+          </footer>
+        }
+      >
+        <div className="command-palette-results" aria-live="polite">
+          {loading ? (
+            <div className="command-palette-state" role="status">
+              <LoaderCircle className="spin" size={17} /> 검색 대상을 불러오는
+              중입니다.
             </div>
-            <footer className="command-palette-footer">
-              <span>Esc 닫기</span>
-              <span>Enter 열기</span>
-            </footer>
-          </section>
+          ) : null}
+          {error ? (
+            <div
+              className="command-palette-state command-palette-error"
+              role="alert"
+            >
+              {error}
+              <button
+                type="button"
+                className="button button-secondary button-compact"
+                onClick={() => void loadMatters()}
+              >
+                다시 시도
+              </button>
+            </div>
+          ) : null}
+          {!loading && results.length === 0 ? (
+            <div className="command-palette-state">
+              일치하는 항목이 없습니다.
+            </div>
+          ) : null}
+          {results.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.id} href={item.href} onClick={close}>
+                <span className="command-result-icon">
+                  <Icon size={16} aria-hidden="true" />
+                </span>
+                <span>
+                  <strong>{item.label}</strong>
+                  <small>{item.description}</small>
+                </span>
+              </Link>
+            );
+          })}
         </div>
-      ) : null}
+      </Dialog>
     </>
   );
 }

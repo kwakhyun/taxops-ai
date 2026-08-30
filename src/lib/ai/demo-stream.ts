@@ -188,7 +188,7 @@ export async function createDemoTaxResponse(input: {
         data: {
           stage: "VERIFY",
           label: hasVerifiedReconciliation
-            ? "결정론적 검증이 주장과 원문 인용을 확인했습니다."
+            ? "자동 검증으로 분석 내용과 인용 근거의 일치 여부를 확인했습니다."
             : "검색 근거를 연결했으며 전문가 확인이 필요합니다.",
           status: "complete",
           traceId: input.traceId,

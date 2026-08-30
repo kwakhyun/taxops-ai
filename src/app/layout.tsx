@@ -5,6 +5,7 @@ import { AuthenticationError, getSessionUser } from "@/lib/auth/session";
 import { getPermissions } from "@/lib/auth/rbac";
 import { isPortfolioDemo } from "@/lib/runtime/portfolio-demo";
 import "./globals.css";
+import "./workspace.css";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function RootLayout({
           permissions={permissions}
           portfolioDemo={isPortfolioDemo()}
         >
-          <div id="main-content">{children}</div>
+          {children}
         </AppShell>
       </body>
     </html>

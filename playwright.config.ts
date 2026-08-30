@@ -9,12 +9,24 @@ const baseURL = `http://127.0.0.1:${e2ePort}`;
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
+  forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
+  workers: 1,
   reporter: [["html", { open: "never" }], ["list"]],
+  expect: {
+    timeout: 10_000,
+    toHaveScreenshot: {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixelRatio: 0.04,
+    },
+  },
+  snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}{ext}",
   use: {
     baseURL,
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    video: "retain-on-failure",
   },
   webServer: {
     command: `npm run dev -- --hostname 127.0.0.1 --port ${e2ePort}`,
@@ -22,9 +34,18 @@ export default defineConfig({
     env: {
       ...process.env,
       E2E_RESET_ENABLED: "true",
+      E2E_FIXED_NOW: "2026-08-30T09:00:00+09:00",
     },
     reuseExistingServer: false,
     timeout: 120_000,
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 1000 },
+      },
+    },
+  ],
 });

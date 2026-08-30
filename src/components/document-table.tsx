@@ -4,6 +4,7 @@ import { FileSpreadsheet, FileText, Filter, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { DocumentEvidenceAction } from "@/components/document-evidence-action";
 import { StatusPill } from "@/components/status-pill";
+import { TableViewport } from "@/components/table-viewport";
 import type { DocumentRecord, Matter } from "@/lib/domain/types";
 import { dataClassLabel } from "@/lib/ui/labels";
 
@@ -86,8 +87,8 @@ export function DocumentTable({
       </div>
 
       {filtered.length ? (
-        <div className="table-wrap">
-          <table className="data-table library-table">
+        <TableViewport label="세무 자료 목록">
+          <table className="data-table library-table responsive-table">
             <thead>
               <tr>
                 <th>자료</th>
@@ -95,7 +96,7 @@ export function DocumentTable({
                 <th>상태</th>
                 <th>보안 등급</th>
                 <th>검색 근거</th>
-                <th>검색 단위</th>
+                <th>문서 구간 수</th>
                 <th>원본 파일 해시</th>
                 <th>최근 변경</th>
               </tr>
@@ -110,7 +111,7 @@ export function DocumentTable({
                 const matter = matterNames.get(document.matterId);
                 return (
                   <tr key={document.id}>
-                    <td>
+                    <td className="record-primary" data-label="자료">
                       <div className="case-identity">
                         <span className="file-icon">
                           <Icon size={17} aria-hidden="true" />
@@ -123,20 +124,20 @@ export function DocumentTable({
                         </span>
                       </div>
                     </td>
-                    <td>
+                    <td data-label="세무 업무">
                       {matter
                         ? `${matter.client} · ${matter.taxType}`
                         : "현재 세무 업무"}
                     </td>
-                    <td>
+                    <td data-label="상태">
                       <StatusPill status={document.status} />
                     </td>
-                    <td>
+                    <td data-label="보안 등급">
                       <span className="classification-chip">
                         {dataClassLabel(document.piiClass)}
                       </span>
                     </td>
-                    <td>
+                    <td data-label="검색 근거">
                       <div className="evidence-review-cell">
                         <StatusPill status={document.evidenceStatus} />
                         {canReviewEvidence &&
@@ -147,21 +148,21 @@ export function DocumentTable({
                         ) : null}
                       </div>
                     </td>
-                    <td>
+                    <td data-label="문서 구간 수">
                       {document.chunks
                         ? `${document.chunks.toLocaleString("ko-KR")}개`
                         : "—"}
                     </td>
-                    <td>
+                    <td data-label="원본 파일 해시">
                       <code className="checksum">{document.checksum}</code>
                     </td>
-                    <td>{document.updatedAt}</td>
+                    <td data-label="최근 변경">{document.updatedAt}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-        </div>
+        </TableViewport>
       ) : (
         <div className="empty-state">
           <span className="empty-state-icon">

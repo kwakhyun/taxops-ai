@@ -11,6 +11,8 @@ import {
   Sparkles,
   TimerReset,
 } from "lucide-react";
+import { DashboardControlRoom } from "@/components/dashboard-control-room";
+import { EngagementJourney } from "@/components/engagement-journey";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
@@ -48,16 +50,19 @@ export default async function DashboardPage() {
       )
     : 0;
   const focus = priority[0];
+  const dashboardNow = process.env.E2E_FIXED_NOW
+    ? new Date(process.env.E2E_FIXED_NOW)
+    : new Date();
   const today = new Intl.DateTimeFormat("ko-KR", {
     dateStyle: "full",
     timeZone: "Asia/Seoul",
-  }).format(new Date());
+  }).format(dashboardNow);
 
   return (
     <>
       <PageHeading
         eyebrow={today}
-        title="오늘의 세무 업무"
+        title="오늘 처리할 세무 업무"
         description={`${user.name}님, 마감과 검토 대기 항목부터 확인하세요. AI 결과는 근거와 승인 상태를 함께 관리합니다.`}
         actions={
           <>
@@ -81,7 +86,11 @@ export default async function DashboardPage() {
           footer={
             <div
               className="progress-track"
-              aria-label={"평균 진행률 " + progress + "%"}
+              role="progressbar"
+              aria-label="진행 중인 세무 업무의 평균 진행률"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress}
             >
               <div className="progress-bar" style={{ width: progress + "%" }} />
             </div>
@@ -110,6 +119,8 @@ export default async function DashboardPage() {
         />
       </section>
 
+      <DashboardControlRoom matters={matters} />
+
       <section className="dashboard-grid">
         <article className="card">
           <div className="card-header">
@@ -135,7 +146,7 @@ export default async function DashboardPage() {
               <tbody>
                 {priority.map((matter) => (
                   <tr key={matter.id}>
-                    <td>
+                    <td data-label="고객사·세목">
                       <Link
                         className="table-primary"
                         href={"/cases/" + matter.id}
@@ -146,15 +157,22 @@ export default async function DashboardPage() {
                         </span>
                       </Link>
                     </td>
-                    <td>
+                    <td data-label="상태">
                       <StatusPill status={matter.status} />
                     </td>
-                    <td>
+                    <td data-label="리스크">
                       <StatusPill status={matter.risk} />
                     </td>
-                    <td>
+                    <td data-label="진행률">
                       <div className="table-progress">
-                        <div className="progress-track">
+                        <div
+                          className="progress-track"
+                          role="progressbar"
+                          aria-label={`${matter.client} 업무 진행률`}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={matter.progress}
+                        >
                           <div
                             className="progress-bar"
                             style={{ width: matter.progress + "%" }}
@@ -163,7 +181,7 @@ export default async function DashboardPage() {
                         <span>{matter.progress}%</span>
                       </div>
                     </td>
-                    <td>{matter.dueDate}</td>
+                    <td data-label="마감">{matter.dueDate}</td>
                   </tr>
                 ))}
               </tbody>
@@ -207,6 +225,8 @@ export default async function DashboardPage() {
           </div>
         </article>
       </section>
+
+      {focus ? <EngagementJourney matter={focus} compact /> : null}
 
       <section className="ai-insight-card" aria-labelledby="ai-insight-title">
         <div className="ai-insight-header">

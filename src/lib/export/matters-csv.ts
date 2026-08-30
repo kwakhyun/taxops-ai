@@ -1,5 +1,6 @@
 import type { Matter } from "@/lib/domain/types";
 import { statusLabel } from "@/lib/ui/labels";
+import { buildCsv } from "@/lib/export/csv";
 
 const headers = [
   "고객사",
@@ -16,12 +17,6 @@ const headers = [
   "업무 요약",
 ] as const;
 
-function csvCell(value: string | number) {
-  const raw = String(value);
-  const text = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
-  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
 export function buildMattersCsv(matters: Matter[]) {
   const rows = matters.map((matter) => [
     matter.client,
@@ -37,7 +32,5 @@ export function buildMattersCsv(matters: Matter[]) {
     matter.openFindings,
     matter.summary,
   ]);
-  return `\uFEFF${[headers, ...rows]
-    .map((row) => row.map(csvCell).join(","))
-    .join("\r\n")}\r\n`;
+  return buildCsv([headers, ...rows]);
 }

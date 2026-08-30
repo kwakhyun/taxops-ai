@@ -50,17 +50,19 @@ export default async function DocumentsPage({ searchParams }: Props) {
 
       <div className="documents-layout">
         <UploadPanel
+          key={uploadMatterId ?? "all"}
           matterId={uploadMatterId}
+          matters={matters}
           canIngestAuthority={can(user, "authority:ingest")}
         />
-        <aside className="ingestion-summary">
+        <aside className="ingestion-summary" aria-label="자료 처리 요약">
           <div>
             <span className="ingestion-icon">
               <FileArchive size={18} />
             </span>
             <div>
               <strong>{indexedChunks.toLocaleString("ko-KR")}</strong>
-              <span>검색 가능한 자료 구간</span>
+              <span>검색용 문서 구간</span>
             </div>
           </div>
           <div>
@@ -73,18 +75,22 @@ export default async function DocumentsPage({ searchParams }: Props) {
                   ? `${Math.round((approvedDocuments / documents.length) * 100)}%`
                   : "—"}
               </strong>
-              <span>검색 근거 승인율</span>
+              <span>근거 사용 승인율</span>
             </div>
           </div>
         </aside>
       </div>
 
-      <nav className="filter-group" aria-label="자료를 연결할 세무 업무">
+      <nav
+        className="filter-group document-matter-filters"
+        aria-label="업무별 자료 보기"
+      >
         <Link
           className={
             "filter-chip " + (!selectedMatter ? "filter-chip-active" : "")
           }
           href="/documents"
+          aria-current={!selectedMatter ? "page" : undefined}
         >
           전체 자료
         </Link>
@@ -95,6 +101,7 @@ export default async function DocumentsPage({ searchParams }: Props) {
               (selectedMatter?.id === matter.id ? "filter-chip-active" : "")
             }
             href={"/documents?matter=" + matter.id}
+            aria-current={selectedMatter?.id === matter.id ? "page" : undefined}
             key={matter.id}
           >
             {matter.client}

@@ -9,10 +9,12 @@ import {
 } from "ai";
 import {
   Check,
+  Clock3,
   FileText,
   LoaderCircle,
   SearchCheck,
   ShieldCheck,
+  TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -108,9 +110,18 @@ function ToolResult({
 }) {
   const name = getToolName(part);
   if (part.state !== "output-available") {
+    const running =
+      part.state === "input-streaming" || part.state === "input-available";
+    const failed =
+      part.state === "output-error" || part.state === "output-denied";
+    const StateIcon = running ? LoaderCircle : failed ? TriangleAlert : Clock3;
     return (
-      <div className="tool-call">
-        <LoaderCircle className="spin" size={13} />
+      <div className="tool-call" data-state={part.state}>
+        <StateIcon
+          className={running ? "spin" : undefined}
+          size={13}
+          aria-hidden="true"
+        />
         <span>{toolLabel(name)}</span>
         <code>{toolStateLabel(part.state)}</code>
       </div>

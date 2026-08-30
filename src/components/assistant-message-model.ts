@@ -15,6 +15,22 @@ export type DisplayEvidence = Pick<
   "id" | "documentName" | "location" | "excerpt"
 >;
 
+export function assistantErrorMessage(error: Error) {
+  const fallback = "응답을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+  let message = error.message;
+  try {
+    const response = objectValue(JSON.parse(message));
+    const detail = objectValue(response?.error);
+    if (detail?.code === "VALIDATION_ERROR") {
+      return "질문 내용을 확인해 주세요. 질문은 2,000자까지 입력할 수 있습니다.";
+    }
+    message = typeof detail?.message === "string" ? detail.message : "";
+  } catch {
+    // Streaming errors can be plain text; transport failures use the fallback.
+  }
+  return /[가-힣]/.test(message) && message.length <= 300 ? message : fallback;
+}
+
 export function objectValue(
   value: unknown,
 ): Record<string, unknown> | undefined {

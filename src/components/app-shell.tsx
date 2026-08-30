@@ -7,7 +7,6 @@ import {
   BadgeCheck,
   Bot,
   BriefcaseBusiness,
-  ChevronDown,
   Files,
   LayoutDashboard,
   Landmark,
@@ -28,6 +27,7 @@ import {
 } from "react";
 import { clsx } from "clsx";
 import { CommandSearch } from "@/components/command-search";
+import { MobileBottomNavigation } from "@/components/mobile-bottom-navigation";
 import type { Permission, Role, SessionUser } from "@/lib/domain/types";
 
 type NavItem = {
@@ -156,31 +156,84 @@ export function AppShell({
   portfolioDemo: boolean;
 }) {
   const pathname = usePathname();
+  const assistantPage = pathname === "/assistant";
+  const appMainRef = useRef<HTMLDivElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileViewport, setMobileViewport] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreMenuFocus = useRef(false);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 860px)");
-    const update = () => setMobileViewport(media.matches);
+    const update = () => {
+      setMobileViewport(media.matches);
+      if (!media.matches) setMobileOpen(false);
+    };
     update();
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
 
   useEffect(() => {
-    if (!mobileOpen) return;
+    if (!mobileOpen) {
+      if (restoreMenuFocus.current) {
+        restoreMenuFocus.current = false;
+        menuButtonRef.current?.focus();
+      }
+      return;
+    }
     closeButtonRef.current?.focus();
     const closeOnEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
+        restoreMenuFocus.current = true;
         setMobileOpen(false);
-        menuButtonRef.current?.focus();
       }
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!assistantPage) return;
+    const element = appMainRef.current;
+    const viewport = window.visualViewport;
+    if (!element || !viewport) return;
+    const resize = () => {
+      // Pinch zoom must remain user-controlled. Resize only for the keyboard/browser chrome.
+      if (Math.abs(viewport.scale - 1) > 0.01) return;
+      element.style.setProperty(
+        "--app-viewport-height",
+        `${viewport.height}px`,
+      );
+      element.style.setProperty(
+        "--app-viewport-top",
+        `${viewport.offsetTop}px`,
+      );
+      element.dataset.keyboardOpen = String(
+        window.innerHeight - viewport.height > 150,
+      );
+    };
+    resize();
+    viewport.addEventListener("resize", resize);
+    viewport.addEventListener("scroll", resize);
+    return () => {
+      viewport.removeEventListener("resize", resize);
+      viewport.removeEventListener("scroll", resize);
+      element.style.removeProperty("--app-viewport-height");
+      element.style.removeProperty("--app-viewport-top");
+      delete element.dataset.keyboardOpen;
+    };
+  }, [assistantPage]);
+
+  useEffect(() => {
+    if (!mobileViewport || !mobileOpen) return;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [mobileViewport, mobileOpen]);
 
   function trapMobileFocus(event: KeyboardEvent<HTMLElement>) {
     if (!mobileViewport || !mobileOpen || event.key !== "Tab") return;
@@ -204,6 +257,7 @@ export function AppShell({
     <div className="app-frame">
       <aside
         id="primary-navigation"
+        aria-label="업무 공간 탐색"
         className={clsx("sidebar", mobileOpen && "sidebar-open")}
         inert={mobileViewport && !mobileOpen ? true : undefined}
         aria-hidden={mobileViewport && !mobileOpen ? true : undefined}
@@ -224,7 +278,10 @@ export function AppShell({
             className="sidebar-close"
             type="button"
             aria-label="메뉴 닫기"
-            onClick={() => setMobileOpen(false)}
+            onClick={() => {
+              restoreMenuFocus.current = true;
+              setMobileOpen(false);
+            }}
           >
             <X size={20} />
           </button>
@@ -238,7 +295,6 @@ export function AppShell({
             <strong>{user.tenantName}</strong>
             <small>세무 업무 공간</small>
           </span>
-          <ChevronDown size={15} aria-hidden="true" />
         </div>
 
         <div className="sidebar-section">
@@ -252,16 +308,20 @@ export function AppShell({
           />
         </div>
 
-        <div className="sidebar-section">
-          <span className="sidebar-label">관리</span>
-          <NavGroup
-            items={operationItems}
-            pathname={pathname}
-            onNavigate={() => setMobileOpen(false)}
-            label="운영 메뉴"
-            permissions={permissions}
-          />
-        </div>
+        {operationItems.some(
+          (item) => !item.permission || permissions.includes(item.permission),
+        ) ? (
+          <div className="sidebar-section">
+            <span className="sidebar-label">관리</span>
+            <NavGroup
+              items={operationItems}
+              pathname={pathname}
+              onNavigate={() => setMobileOpen(false)}
+              label="운영 메뉴"
+              permissions={permissions}
+            />
+          </div>
+        ) : null}
 
         <div className="sidebar-spacer" />
 
@@ -299,11 +359,18 @@ export function AppShell({
           className="sidebar-backdrop"
           type="button"
           aria-label="메뉴 닫기"
-          onClick={() => setMobileOpen(false)}
+          onClick={() => {
+            restoreMenuFocus.current = true;
+            setMobileOpen(false);
+          }}
         />
       ) : null}
 
-      <div className="app-main">
+      <div
+        ref={appMainRef}
+        className={clsx("app-main", assistantPage && "app-main-assistant")}
+        inert={mobileViewport && mobileOpen ? true : undefined}
+      >
         <header className="topbar">
           <button
             ref={menuButtonRef}
@@ -316,6 +383,17 @@ export function AppShell({
           >
             <Menu size={21} />
           </button>
+
+          <Link
+            className="mobile-topbar-brand"
+            href="/"
+            aria-label="TaxOps AI 홈"
+          >
+            <span aria-hidden="true">
+              <Landmark size={15} strokeWidth={2.2} />
+            </span>
+            <strong>TaxOps AI</strong>
+          </Link>
 
           <CommandSearch permissions={permissions} />
 
@@ -342,7 +420,10 @@ export function AppShell({
           </div>
         ) : null}
 
-        <main className="page-canvas">{children}</main>
+        <main className="page-canvas" id="main-content" tabIndex={-1}>
+          {children}
+        </main>
+        <MobileBottomNavigation pathname={pathname} permissions={permissions} />
       </div>
     </div>
   );
