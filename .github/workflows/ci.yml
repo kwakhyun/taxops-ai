@@ -46,7 +46,7 @@ jobs:
         run: docker build --target reviewer -t taxops-reviewer:${{ github.sha }} .
 
   browser-e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -57,6 +57,16 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Upload browser verification evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-e2e-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
   terraform-contract:
     runs-on: ubuntu-latest

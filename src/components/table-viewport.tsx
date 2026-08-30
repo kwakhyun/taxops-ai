@@ -12,7 +12,8 @@ export function TableViewport({
   label: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [overflowing, setOverflowing] = useState(false);
+  // Server-rendered tables must stay keyboard-accessible before measurement.
+  const [overflowing, setOverflowing] = useState<boolean | null>(null);
 
   useEffect(() => {
     const viewport = ref.current;
@@ -38,7 +39,7 @@ export function TableViewport({
         className="table-wrap"
         role="region"
         aria-label={label}
-        tabIndex={overflowing ? 0 : undefined}
+        tabIndex={overflowing === false ? undefined : 0}
       >
         {children}
       </div>
