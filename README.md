@@ -29,9 +29,9 @@
 
 | 검증 영역             |          결과 | 확인 범위                                                    |
 | --------------------- | ------------: | ------------------------------------------------------------ |
-| 단위·코드 계약 테스트 |    77/77 통과 | 보안 통제, 검색, 승인, 비용, 파일 검증과 서버 로직           |
+| 단위·코드 계약 테스트 |    81/81 통과 | 보안 통제, 검색, 승인, 비용, 파일 검증과 서버 로직           |
 | Chromium 사용자 흐름  |      9/9 통과 | 업무 생성, 검색, 내보내기, 다운로드, 업로드, AI, 승인, MCP   |
-| PostgreSQL 운영 계약  |    25/25 통과 | 마이그레이션, RLS, 역할 분리, 조직 간 격리와 트랜잭션        |
+| PostgreSQL 운영 계약  |    27/27 통과 | 마이그레이션, RLS, 역할 분리, 조직 간 격리와 트랜잭션        |
 | 결정론적 AI 평가      |    45/45 통과 | 검색, 인용 무결성, 답변 보류, 프롬프트 인젝션과 조직 간 누출 |
 | 배포 품질 게이트      | 5개 작업 통과 | 전체 검증, 브라우저, DB, 컨테이너 3종과 Terraform            |
 
@@ -65,7 +65,7 @@ flowchart LR
 
 - **제품과 서버:** React 19와 Next.js 16 기반 반응형 업무 화면, 권한별 탐색, 통합 검색, Zod 요청 검증, 표준 오류 응답과 요청 ID
 - **데이터와 파일:** PostgreSQL 16, Drizzle 스키마와 SQL 마이그레이션, pgvector, RLS, 복합 외래 키, 비공개 격리 저장소, 파일 서명과 OOXML 구조 검사, ClamAV, S3 객체 버전·체크섬 결합
-- **AI:** 혼합 검색, 과세기간 기준일, 버전 관리 프롬프트, 제한된 도구 호출, 별도 검증 에이전트, 답변 보류와 실행별·월간 비용 예산
+- **AI:** 혼합 검색, 과세기간 기준일, 코드에 등록된 프롬프트 버전 선택과 롤백, 제한된 도구 호출, 별도 검증 에이전트, 답변 보류와 실행별·월간 비용 예산
 - **보안과 운영:** OIDC Authorization Code + PKCE, RBAC, 분리된 검토 서비스, 비동기 작업 큐, 재시도·DLQ·서명된 알림, 구조화 로그, Docker, GitHub Actions와 AWS Terraform 참조
 - **상호운용:** 현재 조직 범위에서 세무 업무와 근거를 읽는 MCP 서버
 
@@ -93,7 +93,7 @@ npm run dev
 
 브라우저에서 `http://localhost:3000`을 엽니다. 기본 설정은 외부 서비스 없이 재현 가능한 데모 모드입니다. 이 모드는 질문과 검색 근거를 확인해 인용 또는 답변 보류 흐름을 결정하며, 저장된 답변 문장을 그대로 출력하지 않습니다.
 
-실제 AI Gateway를 사용하려면 `.env.local`에 `AI_GATEWAY_API_KEY`를 설정합니다. 운영 모드에 필요한 OIDC, 객체 저장소, 개인정보 비식별화, 문서 처리와 의미 분류기 설정은 [.env.example](.env.example)과 [운영 런북](docs/operations-runbook.md)에 정리했습니다. 준비 상태 API의 의존 서비스별 상세 진단은 운영 전용 `HEALTH_DETAIL_TOKEN`으로만 조회할 수 있습니다.
+실제 AI Gateway를 사용하려면 `.env.local`에 `AI_GATEWAY_API_KEY`를 설정합니다. `AI_PROMPT_VERSION`은 코드에 등록된 프롬프트만 선택하며 기본값은 `tax-memo.v1.3.1`입니다. 운영 모드에 필요한 OIDC, 객체 저장소, 개인정보 비식별화, 문서 처리와 의미 분류기 설정은 [.env.example](.env.example)과 [운영 런북](docs/operations-runbook.md)에 정리했습니다. 준비 상태 API의 의존 서비스별 상세 진단은 운영 전용 `HEALTH_DETAIL_TOKEN`으로만 조회할 수 있습니다.
 
 ## 검증 명령
 
@@ -127,7 +127,7 @@ AI 품질 게이트는 Recall@5 90% 이상, 인용 원문 무결성 100%, 적대
 
 - [아키텍처와 데이터 흐름](docs/architecture.md)
 - [보안 위협 모델](docs/security-threat-model.md)
-- [AI 품질·비용·지연 관리](docs/ai-quality.md)
+- [AI 품질, 지연 시간과 비용 관리](docs/ai-quality.md)
 - [API와 MCP 계약](docs/api.md)
 - [운영 런북](docs/operations-runbook.md)
 - [요구사항 추적표](docs/requirements-traceability.md)

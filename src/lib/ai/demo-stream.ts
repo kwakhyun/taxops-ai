@@ -6,7 +6,7 @@ import {
 import { retrieveEvidenceForContext } from "@/lib/ai/retrieval-service";
 import type { TaxAssistantMessage } from "@/lib/ai/types";
 import { TAX_MODEL_ID } from "@/lib/ai/agents/tax-agent";
-import { taxMemoPrompt } from "@/lib/ai/prompts/tax-memo.v1";
+import type { TaxMemoPromptAsset } from "@/lib/ai/prompts/tax-memo.v1";
 import type { TenantAiPolicy } from "@/lib/security/ai-policy";
 import { verifyClaims, type SupportedClaim } from "@/lib/ai/retrieval";
 
@@ -64,6 +64,7 @@ export async function createDemoTaxResponse(input: {
   taxReferenceDate: string;
   traceId: string;
   aiPolicy: TenantAiPolicy;
+  prompt: TaxMemoPromptAsset;
 }) {
   const question = latestQuestion(input.messages);
   const reconciliationQuestion =
@@ -217,7 +218,7 @@ export async function createDemoTaxResponse(input: {
           tokens: 5842,
           estimatedCostKrw: 42,
           model: `${TAX_MODEL_ID} · deterministic demo`,
-          promptVersion: `${taxMemoPrompt.name}.v${taxMemoPrompt.version}`,
+          promptVersion: input.prompt.id,
         },
       });
       writer.write({

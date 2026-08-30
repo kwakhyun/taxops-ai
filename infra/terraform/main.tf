@@ -875,6 +875,7 @@ resource "aws_ecs_task_definition" "web" {
       { name = "OIDC_REVIEW_RESOURCE_PARAMETER", value = var.oidc_review_resource_parameter },
       { name = "OIDC_REVIEW_SCOPE", value = var.oidc_review_scope },
       { name = "OIDC_REVIEW_REQUIRED_ACR", value = var.oidc_review_required_acr },
+      { name = "AI_PROMPT_VERSION", value = var.ai_prompt_version },
       { name = "REVIEW_SERVICE_URL", value = "http://reviewer.${aws_service_discovery_private_dns_namespace.internal.name}:3100" },
       { name = "REVIEW_SERVICE_ALLOWED_HOST", value = "reviewer.${aws_service_discovery_private_dns_namespace.internal.name}" },
       { name = "REVIEW_SERVICE_ALLOW_ENCRYPTED_HTTP", value = "true" },

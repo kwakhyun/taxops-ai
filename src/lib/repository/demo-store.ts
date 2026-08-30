@@ -24,6 +24,7 @@ import { resolveTenantAiPolicy } from "@/lib/security/ai-policy";
 import { evidenceManifestHash } from "@/lib/documents/evidence-manifest";
 import type { CreateMatterInput } from "@/lib/contracts/cases";
 import type { DocumentDownloadDescriptor } from "@/lib/files/download";
+import { taxMemoPrompt } from "@/lib/ai/prompts/tax-memo.v1";
 
 const demoReviewTargetId = "00000000-0000-4000-8000-000000000401";
 const demoReviewerId = "00000000-0000-4000-8000-000000000102";
@@ -100,7 +101,8 @@ const demoReviewContent = {
   openItems: ["거래 2건의 업무 관련성 소명 확인"],
 };
 const demoReviewProvenance = {
-  promptVersion: "tax-memo.v1.3.0",
+  promptVersion: taxMemoPrompt.id,
+  promptHash: taxMemoPrompt.contentHash,
   retrieverVersion: "hybrid-rag.v1.2.0",
   traceId: "tr_7a81f4c2",
   taxReferenceDate: "2025-12-31T23:59:59+09:00",
@@ -294,6 +296,8 @@ export function createWorkpaperDraft(input: {
   runId: string;
   traceId: string;
   taxReferenceDate: string;
+  promptVersion: string;
+  promptHash: string;
   title: string;
   conclusion: string;
   evidenceIds: string[];
@@ -354,7 +358,8 @@ export function createWorkpaperDraft(input: {
   const provenance = {
     runId: input.runId,
     traceId: input.traceId,
-    promptVersion: "1.3.0",
+    promptVersion: input.promptVersion,
+    promptHash: input.promptHash,
     retrieverVersion: "hybrid-rag.v1.2.0",
     taxReferenceDate: input.taxReferenceDate,
   };

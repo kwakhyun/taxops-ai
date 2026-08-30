@@ -6,6 +6,7 @@ import {
 import { productionLocalStackOverrideIsDisabled } from "@/lib/security/runtime-mode";
 import { isPortfolioDemo } from "@/lib/runtime/portfolio-demo";
 import { healthDetailsAuthorized } from "@/lib/health/readiness";
+import { resolveTaxMemoPrompt } from "@/lib/ai/prompts/tax-memo.v1";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,12 @@ function isAllowlistedHttpsUrl(urlName: string, allowlistName: string) {
 
 export async function GET(request: Request) {
   const portfolioDemo = isPortfolioDemo();
+  let aiPromptConfigured = true;
+  try {
+    resolveTaxMemoPrompt();
+  } catch {
+    aiPromptConfigured = false;
+  }
   let aiPricingConfigured = true;
   try {
     aiPricing();
@@ -118,6 +125,7 @@ export async function GET(request: Request) {
       ? "configured"
       : "demo-mode",
     aiPricing: aiPricingConfigured ? "configured" : "invalid",
+    aiPrompt: aiPromptConfigured ? "configured" : "invalid",
     authentication:
       process.env.AUTH_MODE === "oidc" &&
       oidcConfigured &&
@@ -156,6 +164,7 @@ export async function GET(request: Request) {
       dependencies.aiGateway !== "configured" ||
       dependencies.aiDataRegion !== "configured" ||
       dependencies.aiPricing !== "configured" ||
+      dependencies.aiPrompt !== "configured" ||
       dependencies.authentication !== "configured" ||
       dependencies.objectStorage !== "configured" ||
       dependencies.reviewerCredentialIsolation !== "configured" ||
@@ -164,10 +173,12 @@ export async function GET(request: Request) {
       dependencies.promptInjectionClassifier !== "configured" ||
       dependencies.localStackOverride !== "disabled");
 
-  const status = portfolioDemo
-    ? "demo-ready"
-    : productionMisconfigured
-      ? "not-ready"
+  const deploymentMisconfigured =
+    !aiPromptConfigured || productionMisconfigured;
+  const status = deploymentMisconfigured
+    ? "not-ready"
+    : portfolioDemo
+      ? "demo-ready"
       : "ready";
   const includeDetails = healthDetailsAuthorized(
     request.headers.get("authorization"),
@@ -182,7 +193,7 @@ export async function GET(request: Request) {
         }
       : { status },
     {
-      status: productionMisconfigured ? 503 : 200,
+      status: deploymentMisconfigured ? 503 : 200,
       headers: {
         "cache-control": "no-store",
         vary: "authorization",

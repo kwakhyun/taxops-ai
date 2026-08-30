@@ -8,7 +8,7 @@ import { createTaxAgent, TAX_MODEL_ID } from "@/lib/ai/agents/tax-agent";
 import { createDemoTaxResponse } from "@/lib/ai/demo-stream";
 import { assertSafePrompt } from "@/lib/ai/guardrails";
 import { verifiedToolOutputOnlyTransform } from "@/lib/ai/stream-policy";
-import { taxMemoPrompt } from "@/lib/ai/prompts/tax-memo.v1";
+import { resolveTaxMemoPrompt } from "@/lib/ai/prompts/tax-memo.v1";
 import { normalizeAssistantMessages } from "@/lib/ai/message-validation";
 import {
   assertAiBudget,
@@ -57,6 +57,7 @@ export async function handleAssistantRequest(request: Request) {
 
     const parsed = requestSchema.parse(await request.json());
     const normalized = await normalizeAssistantMessages(parsed.messages);
+    const prompt = resolveTaxMemoPrompt();
     const aiPolicy = await getTenantAiPolicy(user);
     const matter = await findMatter(user, parsed.matterId);
     if (!matter) {
@@ -126,6 +127,7 @@ export async function handleAssistantRequest(request: Request) {
         taxReferenceDate,
         traceId,
         aiPolicy,
+        prompt,
       });
     }
 
@@ -142,37 +144,40 @@ export async function handleAssistantRequest(request: Request) {
     let toolCalls = 0;
     let inputTokens = 0;
     let outputTokens = 0;
-    const agent = createTaxAgent({
-      tenantId: user.tenantId,
-      matterId: matter.id,
-      actorId: user.id,
-      traceId,
-      aiPolicy,
-      runId,
-      taxReferenceDate,
-      calculationRequired: requiresTaxCalculation(question),
-      requestWorkpaper:
-        /(워크페이퍼|검토조서|검토\s*요청|승인\s*요청|초안\s*(?:작성|만들))/.test(
-          question,
-        ),
-      reportNestedUsage(usage) {
-        inputTokens += usage.inputTokens;
-        outputTokens += usage.outputTokens;
-        try {
-          assertAiBudget({
-            maxInputTokens: inputTokens,
-            maxOutputTokens: outputTokens,
-            maxToolCalls: toolCalls,
-            maxEstimatedCostKrw: estimateAiCostKrw({
-              inputTokens,
-              outputTokens,
-            }),
-          });
-        } catch (budgetError) {
-          budgetController.abort(budgetError);
-        }
+    const agent = createTaxAgent(
+      {
+        tenantId: user.tenantId,
+        matterId: matter.id,
+        actorId: user.id,
+        traceId,
+        aiPolicy,
+        runId,
+        taxReferenceDate,
+        calculationRequired: requiresTaxCalculation(question),
+        requestWorkpaper:
+          /(워크페이퍼|검토조서|검토\s*요청|승인\s*요청|초안\s*(?:작성|만들))/.test(
+            question,
+          ),
+        reportNestedUsage(usage) {
+          inputTokens += usage.inputTokens;
+          outputTokens += usage.outputTokens;
+          try {
+            assertAiBudget({
+              maxInputTokens: inputTokens,
+              maxOutputTokens: outputTokens,
+              maxToolCalls: toolCalls,
+              maxEstimatedCostKrw: estimateAiCostKrw({
+                inputTokens,
+                outputTokens,
+              }),
+            });
+          } catch (budgetError) {
+            budgetController.abort(budgetError);
+          }
+        },
       },
-    });
+      { prompt },
+    );
 
     return createAgentUIStreamResponse({
       agent,
@@ -325,7 +330,7 @@ export async function handleAssistantRequest(request: Request) {
           tokens: inputTokens + outputTokens,
           estimatedCostKrw,
           model: TAX_MODEL_ID,
-          promptVersion: taxMemoPrompt.version,
+          promptVersion: prompt.id,
           outcome: proposed || delivered ? "SUCCESS" : "FAILED",
         });
         activeRun = undefined;

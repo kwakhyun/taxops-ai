@@ -5,7 +5,6 @@ import { verifyClaims } from "@/lib/ai/retrieval";
 import { retrieveEvidenceForContext } from "@/lib/ai/retrieval-service";
 import type { TenantAiPolicy } from "@/lib/security/ai-policy";
 import type { Evidence } from "@/lib/domain/types";
-import { taxMemoPromptHash } from "@/lib/ai/prompts/tax-memo.v1";
 import { RETRIEVER_VERSION } from "@/lib/ai/retrieval";
 import {
   createWorkpaperDraft,
@@ -20,6 +19,8 @@ export interface TaxToolContext {
   traceId: string;
   runId: string;
   taxReferenceDate: string;
+  promptVersion: string;
+  promptHash: string;
   aiPolicy: TenantAiPolicy;
   calculationRequired: boolean;
   requestWorkpaper: boolean;
@@ -104,7 +105,7 @@ export function verificationArtifactHash(
   calculations: unknown[],
   evidence: Map<string, Evidence>,
   verifiedClaims: TaxVerificationState["verifiedClaims"],
-  context: Pick<TaxToolContext, "taxReferenceDate" | "aiPolicy">,
+  context: Pick<TaxToolContext, "taxReferenceDate" | "promptHash" | "aiPolicy">,
 ) {
   const evidenceBindings = [...new Set(evidenceIds)].sort().map((id) => {
     const item = evidence.get(id);
@@ -134,7 +135,7 @@ export function verificationArtifactHash(
           .sort((left, right) => left.id.localeCompare(right.id)),
         calculations,
         taxReferenceDate: context.taxReferenceDate,
-        promptHash: taxMemoPromptHash,
+        promptHash: context.promptHash,
         retrieverVersion: RETRIEVER_VERSION,
         outboundPiiMode: context.aiPolicy.outboundPiiMode,
       }),

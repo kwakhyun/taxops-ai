@@ -11,10 +11,7 @@ import {
 } from "../src/lib/ai/retrieval";
 import { detectPromptInjection } from "../src/lib/ai/guardrails";
 import { goldenSet } from "../tests/fixtures/golden-set";
-import {
-  taxMemoPrompt,
-  taxMemoPromptHash,
-} from "../src/lib/ai/prompts/tax-memo.v1";
+import { resolveTaxMemoPrompt } from "../src/lib/ai/prompts/tax-memo.v1";
 import { createTaxAgent } from "../src/lib/ai/agents/tax-agent";
 import { claimBindingId } from "../src/lib/ai/tools";
 import { estimateAiCostKrw } from "../src/lib/ai/budget";
@@ -22,6 +19,8 @@ import {
   protectAiOutboundWithDlp,
   resolveTenantAiPolicy,
 } from "../src/lib/security/ai-policy";
+
+const selectedPrompt = resolveTaxMemoPrompt();
 
 function mockUsage() {
   return {
@@ -249,7 +248,11 @@ async function runGeneratedAgentEvaluation() {
             nestedOutputTokens += usage.outputTokens;
           },
         },
-        { primaryModel: primary, verifierModel: verifier },
+        {
+          primaryModel: primary,
+          verifierModel: verifier,
+          prompt: selectedPrompt,
+        },
       );
       const startedAt = performance.now();
       const generated = await agent.generate({ prompt: protectedPrompt });
@@ -408,8 +411,8 @@ async function main() {
   const report = {
     schemaVersion: "2.0",
     generatedAt: new Date().toISOString(),
-    promptVersion: `${taxMemoPrompt.name}.v${taxMemoPrompt.version}`,
-    promptHash: taxMemoPromptHash,
+    promptVersion: selectedPrompt.id,
+    promptHash: selectedPrompt.contentHash,
     retrieverVersion: RETRIEVER_VERSION,
     datasetSize: goldenSet.length,
     passedCases: results.filter((item) => item.pass).length,

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 import { generateKeyPair, jwtVerify, SignJWT } from "jose";
 import { demoUsers, evidence } from "@/lib/domain/fixtures";
 import { authorizeResource, can } from "@/lib/auth/rbac";
@@ -54,6 +55,12 @@ import { validateRegionalServiceEndpoint } from "@/lib/security/regional-service
 import { createAuthorizationRequest } from "@/lib/auth/oidc-flow";
 import { workpaperEvidenceBindings } from "@/lib/workpapers/artifact";
 import { isPortfolioDemo } from "@/lib/runtime/portfolio-demo";
+import {
+  DEFAULT_TAX_MEMO_PROMPT_ID,
+  resolveTaxMemoPrompt,
+  taxMemoPromptAssets,
+} from "@/lib/ai/prompts/tax-memo.v1";
+import { GET as getReadiness } from "@/app/api/health/ready/route";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -75,6 +82,46 @@ const validWorkpaperEvidenceBinding = {
   sourceUri: null,
   acquiredAt: null,
 };
+
+describe("프롬프트 자산 구성", () => {
+  it("기본 프롬프트의 버전과 해시를 불변 자산으로 유지한다", () => {
+    const prompt = resolveTaxMemoPrompt();
+    expect(prompt.id).toBe(DEFAULT_TAX_MEMO_PROMPT_ID);
+    expect(prompt.id).toBe("tax-memo.v1.3.1");
+    expect(prompt.contentHash).toBe(
+      createHash("sha256").update(prompt.content).digest("hex"),
+    );
+    expect(Object.isFrozen(prompt)).toBe(true);
+    expect(Object.isFrozen(taxMemoPromptAssets)).toBe(true);
+  });
+
+  it("등록된 이전 프롬프트를 롤백 대상으로 선택할 수 있다", () => {
+    const previous = resolveTaxMemoPrompt("tax-memo.v1.3.0");
+    const current = resolveTaxMemoPrompt("tax-memo.v1.3.1");
+    expect(previous.contentHash).toBe(
+      "eef395686d730a3148f8d16250d7dca901420aa9dfb9d4af7671c671d592c323",
+    );
+    expect(previous.contentHash).not.toBe(current.contentHash);
+    expect(taxMemoPromptAssets).toHaveLength(2);
+  });
+
+  it("등록되지 않은 프롬프트 버전은 운영 실행 전에 거부한다", () => {
+    expect(() => resolveTaxMemoPrompt("tax-memo.v9.9.9")).toThrowError(
+      /등록되지 않은 AI 프롬프트 버전/,
+    );
+  });
+
+  it("등록되지 않은 프롬프트 버전이면 준비 상태를 실패로 반환한다", async () => {
+    vi.stubEnv("AI_PROMPT_VERSION", "tax-memo.v9.9.9");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("REVIEW_SERVICE_URL", "");
+    const response = await getReadiness(
+      new Request("http://localhost/api/health/ready"),
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ status: "not-ready" });
+  });
+});
 
 function storedZip(
   entries: Array<{

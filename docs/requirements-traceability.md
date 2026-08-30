@@ -2,25 +2,25 @@
 
 이 표는 구현 근거와 아직 저장소만으로 증명할 수 없는 항목을 구분합니다. “구현”은 코드와 자동 검증이 있다는 뜻이며, 실제 운영 경력이나 고객 배포를 의미하지 않습니다.
 
-| 역량 영역                        | 구현 근거                                                                               | 자동 검증                                                       | 상태                      |
-| -------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------- |
-| React/Next.js/TypeScript 제품 UI | `src/app`, `src/components`, App Router, Server/Client Component 분리, 반응형 업무 화면 | typecheck, build, Chromium E2E, 모바일 시각 점검                | 구현                      |
-| REST와 서버 로직                 | `src/app/api/v1`, Zod 계약, 오류 envelope, request ID                                   | API 포함 E2E, 단위 테스트                                       | 구현                      |
-| 외부 서비스 연동                 | OIDC/JWKS, S3, ClamAV, private processor, AI Gateway, MCP, 서명 webhook                 | 로컬 대체 경로와 계약 테스트, 실제 production endpoint는 미연결 | 구현, 실환경 검증 필요    |
-| DB 설계·쿼리·migration           | 18개 테이블·enum, pgvector/FTS, 복합 FK·index, Drizzle schema와 SQL migration           | PostgreSQL migration/seed, RLS·역할·승인 경계 25건              | 구현                      |
-| 인증·권한                        | OIDC Code + PKCE와 Bearer 검증, DB membership role, RBAC, RLS, Origin 검증              | 역할·tenant 단위 테스트, RLS CI                                 | 구현                      |
-| 파일 처리                        | 형식/서명/크기/checksum, OOXML ZIP 구조, quarantine, ClamAV, parse, chunk, index        | 파일 단위 테스트, EICAR 포함 Worker 컨테이너 스모크             | 구현                      |
-| 비동기 작업                      | DB queue, idempotency, lease, heartbeat, retry/jitter, DLQ, outbox                      | 상태·업로드 테스트, DB 계약 job                                 | 구현                      |
-| 운영 로그·감사                   | allowlist JSON log, redaction, trace/request ID, 전체 테넌트 hash-chain verifier        | redaction·hash 단위 테스트, PostgreSQL 전체 체인 계약           | 구현, 외부 WORM 연동 필요 |
-| Docker·CI/CD·cloud               | multi-stage web/worker image, Compose, GitHub Actions, AWS ECS/RDS/S3/KMS Terraform     | image build CI, compose config; Terraform apply는 미실행        | 구현, 계정 적용 필요      |
-| 생성형 AI 서비스                 | streaming AI route, hybrid RAG, tool calling, 독립 verifier, 기권                       | 45-case eval, 5개 mock agent 실행, AI E2E                       | 구현, 실제 모델 평가 필요 |
-| MCP·agent orchestration          | 공식 MCP SDK read-only server, ToolLoopAgent 2단계 검증                                 | 공식 MCP client E2E, tool 정책 테스트                           | 구현                      |
-| 프롬프트 자산화                  | versioned prompt, tool schema, retrieval version, report provenance                     | eval report에 버전 기록                                         | 구현                      |
-| 품질·latency·cost·observability  | 품질 gate, step/time/token/cost budget, 월간 원자적 예산 예약, telemetry 원문 비기록    | budget 단위 테스트, eval                                        | 구현                      |
-| 민감정보와 enterprise control    | PII redaction, OIDC, RBAC, tenant RLS, KMS/S3, 분리 승인 서비스, audit                  | 보안 테스트, Reviewer OIDC/HTTP 계약, threat model              | 구현, 조직 통제 연동 필요 |
-| 파일 중심 업무 UX                | 세무 업무→업로드→AI 근거→검토 승인→감사 흐름                                            | 9개 end-to-end 시나리오                                         | 구현                      |
-| 모호한 요구의 기술 분해          | 요구사항, architecture, threat model, quality gate, runbook으로 분리                    | 문서와 코드 traceability                                        | 구현                      |
-| 실제 사용자 배포·운영 3년 이상   | 저장소로는 재직 기간과 실사용 운영 이력을 입증할 수 없음                                | 경력증명, 실제 서비스 지표, 추천서 등 별도 자료 필요            | 미증명                    |
+| 역량 영역                        | 구현 근거                                                                                           | 자동 검증                                                          | 상태                      |
+| -------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| React/Next.js/TypeScript 제품 UI | `src/app`, `src/components`, App Router, 서버·클라이언트 컴포넌트 분리, 반응형 업무 화면            | 타입 검사, 빌드, Chromium E2E, 모바일 화면 점검                    | 구현                      |
+| REST와 서버 로직                 | `src/app/api/v1`, Zod 계약, 공통 오류 응답 형식, 요청 ID                                            | API 포함 E2E, 단위 테스트                                          | 구현                      |
+| 외부 서비스 연동                 | OIDC/JWKS, S3, ClamAV, 비공개 문서 처리기, AI Gateway, MCP, 서명 웹훅                               | 로컬 대체 경로와 계약 테스트, 실제 운영 엔드포인트는 미연결        | 구현, 실환경 검증 필요    |
+| DB 설계, 쿼리와 마이그레이션     | 18개 테이블, 8개 enum, pgvector/전문 검색, 복합 외래 키와 인덱스, Drizzle 스키마와 SQL 마이그레이션 | PostgreSQL 마이그레이션과 초기 데이터, RLS·역할·승인 경계 27건     | 구현                      |
+| 인증과 권한                      | OIDC Authorization Code + PKCE와 Bearer 검증, DB 조직 소속·역할, RBAC, RLS, Origin 검증             | 역할과 조직 범위 단위 테스트, RLS CI                               | 구현                      |
+| 파일 처리                        | 형식, 서명, 크기와 체크섬, OOXML ZIP 구조, 격리, ClamAV, 파싱, 청킹, 색인                           | 파일 단위 테스트, EICAR 포함 워커 컨테이너 스모크 테스트           | 구현                      |
+| 비동기 작업                      | DB 작업 큐, 멱등성, 임대, 하트비트, 재시도와 무작위 지연, DLQ, 트랜잭셔널 아웃박스                  | 상태와 업로드 테스트, DB 작업 계약                                 | 구현                      |
+| 운영 로그와 감사                 | 허용 목록 기반 JSON 로그, 비식별화, 추적·요청 ID, 전체 조직 해시 체인 검증기                        | 비식별화와 해시 단위 테스트, PostgreSQL 전체 체인 계약             | 구현, 외부 WORM 연동 필요 |
+| Docker, CI/CD와 클라우드         | 웹·워커·검토 서비스 다단계 이미지, Compose, GitHub Actions, AWS ECS/RDS/S3/KMS Terraform            | 이미지 빌드 CI, Compose 구성 검사, Terraform 적용은 미실행         | 구현, 계정 적용 필요      |
+| 생성형 AI 서비스                 | 스트리밍 AI 경로, 혼합 RAG, 도구 호출, 독립 검증 에이전트, 답변 보류                                | 평가 사례 45건, 모의 에이전트 실행 5건, AI E2E                     | 구현, 실제 모델 평가 필요 |
+| MCP와 에이전트 오케스트레이션    | 공식 MCP SDK 읽기 전용 서버, `ToolLoopAgent` 2단계 검증                                             | 공식 MCP 클라이언트 E2E, 도구 정책 테스트                          | 구현                      |
+| 프롬프트 자산화                  | 코드 등록형 불변 프롬프트, 도구 스키마, 검색 버전, 실행 및 검토조서 출처 정보                       | 버전 선택, 롤백, 미등록 값 거부 테스트, 평가 보고서와 DB 해시 계약 | 구현                      |
+| 품질, 지연 시간, 비용과 관측성   | 품질 게이트, 단계와 시간, 토큰 및 비용 예산, 월간 원자적 예산 예약, 관측 데이터 원문 비기록         | 예산 단위 테스트, 결정론적 평가                                    | 구현                      |
+| 민감정보와 엔터프라이즈 통제     | 개인정보 비식별화, OIDC, RBAC, 조직 RLS, KMS/S3, 분리 승인 서비스, 감사 기록                        | 보안 테스트, 검토 서비스 OIDC/HTTP 계약, 위협 모델                 | 구현, 조직 통제 연동 필요 |
+| 파일 중심 업무 UX                | 세무 업무 생성, 자료 업로드, AI 근거 확인, 검토 승인과 감사 흐름                                    | E2E 시나리오 9건                                                   | 구현                      |
+| 모호한 요구의 기술 분해          | 요구사항, 아키텍처, 위협 모델, 품질 게이트와 운영 런북으로 분리                                     | 문서와 코드의 요구사항 추적                                        | 구현                      |
+| 실제 사용자 배포·운영 3년 이상   | 저장소로는 재직 기간과 실사용 운영 이력을 입증할 수 없음                                            | 경력증명, 실제 서비스 지표, 추천서 등 별도 자료 필요               | 미증명                    |
 
 ## 대표 사용자 시나리오
 
@@ -34,6 +34,8 @@
 
 ## 검증 범위의 한계
 
-2026-08-30 로컬 검증에서는 PostgreSQL/pgvector 마이그레이션과 RLS·역할·승인 경계 계약 25건을 통과했습니다. 분리된 검토 서비스의 OIDC/HTTP 계약과 MinIO·ClamAV 워커 스모크 테스트도 컨테이너에서 확인했습니다.
+2026-08-30 로컬 검증에서는 PostgreSQL/pgvector 마이그레이션과 RLS, 역할, 승인 및 프롬프트 자산 경계 계약 27건을 통과했습니다. 분리된 검토 서비스의 OIDC/HTTP 계약과 MinIO·ClamAV 워커 스모크 테스트도 컨테이너에서 확인했습니다.
 
-검증에는 근거 0건, 위조된 원문 필드, 앱 역할의 검토조서 이력 직접 쓰기를 거부하는 시나리오가 포함됩니다. 정상 승인과 연결된 AI 실행 상태가 함께 전이되는지도 확인합니다. 이는 로컬 통합 검증이며 AWS 계정에 Terraform을 적용했거나 실제 IdP, 개인정보 비식별화, 의미 분류기, 문서 처리기와 연결했다는 의미는 아닙니다.
+검증에는 근거 0건, 위조된 원문 필드, 앱 역할의 검토조서 이력 직접 쓰기를 거부하는 시나리오가 포함됩니다. 정상 승인과 연결된 AI 실행 상태가 함께 전이되는지도 확인합니다.
+
+이는 로컬 통합 검증입니다. AWS 계정에 Terraform을 적용했거나 실제 IdP, 개인정보 비식별화, 의미 분류기, 문서 처리기와 연결했다는 의미는 아닙니다.

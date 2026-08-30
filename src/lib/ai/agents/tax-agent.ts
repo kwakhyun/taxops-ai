@@ -14,7 +14,10 @@ import {
   verificationArtifactHash,
   type TaxToolContext,
 } from "@/lib/ai/tools";
-import { taxMemoPrompt } from "@/lib/ai/prompts/tax-memo.v1";
+import {
+  resolveTaxMemoPrompt,
+  type TaxMemoPromptAsset,
+} from "@/lib/ai/prompts/tax-memo.v1";
 import { defaultAiBudget } from "@/lib/ai/budget";
 import { recordToolCall } from "@/lib/repository";
 
@@ -42,7 +45,10 @@ const verifierOutput = z.strictObject({
 export interface TaxAgentDependencies {
   primaryModel?: LanguageModel;
   verifierModel?: LanguageModel;
+  prompt?: TaxMemoPromptAsset;
 }
+
+type TaxAgentContext = Omit<TaxToolContext, "promptVersion" | "promptHash">;
 
 function modelIdentifier(model: LanguageModel) {
   return typeof model === "string"
@@ -66,11 +72,17 @@ function createVerifierAgent(model: LanguageModel) {
 }
 
 export function createTaxAgent(
-  context: TaxToolContext,
+  context: TaxAgentContext,
   dependencies: TaxAgentDependencies = {},
 ) {
+  const prompt = dependencies.prompt ?? resolveTaxMemoPrompt();
+  const toolContext: TaxToolContext = {
+    ...context,
+    promptVersion: prompt.id,
+    promptHash: prompt.contentHash,
+  };
   const state = createVerificationState();
-  const tools = createTaxTools(context, state);
+  const tools = createTaxTools(toolContext, state);
   const primaryModel = dependencies.primaryModel ?? TAX_MODEL_ID;
   const verifierModel = dependencies.verifierModel ?? TAX_VERIFIER_MODEL_ID;
   const verifier = createVerifierAgent(verifierModel);
@@ -201,7 +213,7 @@ export function createTaxAgent(
             state.calculations,
             state.evidence,
             state.verifiedClaims,
-            context,
+            toolContext,
           )
         : undefined;
       await recordToolCall({
@@ -222,7 +234,7 @@ export function createTaxAgent(
 
   const agent = new ToolLoopAgent({
     model: primaryModel,
-    instructions: `${taxMemoPrompt.content}
+    instructions: `${prompt.content}
 
 현재 실행 컨텍스트:
 - matterId: ${context.matterId}

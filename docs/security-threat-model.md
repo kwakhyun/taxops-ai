@@ -2,38 +2,42 @@
 
 ## 보호 대상과 신뢰 경계
 
-보호 대상은 고객 원본 문서, 추출 텍스트와 임베딩, 세무 결론, 승인 기록, 사용자 신원, 감사 로그, API·OIDC·문서 처리 secret입니다. 브라우저, 공개 ALB, 웹 런타임, 작업 큐, 워커, 데이터베이스, 객체 저장소, AI Gateway, 문서 처리 서비스 사이를 각각 별도 신뢰 경계로 봅니다.
+보호 대상은 고객 원본 자료, 추출 텍스트와 임베딩, 세무 결론, 승인 기록, 사용자 신원, 감사 로그, API·OIDC·문서 처리 비밀값입니다. 브라우저, 공개 ALB, 웹 런타임, 작업 큐, 워커, 데이터베이스, 객체 저장소, AI Gateway와 문서 처리 서비스 사이를 각각 별도 신뢰 경계로 봅니다.
 
 ## 주요 위협과 통제
 
-| 위협                         | 통제                                                                                                             | 검증                                        |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| 위조된 사용자·역할           | Code + PKCE·state·nonce, issuer/audience/algorithm 고정, HttpOnly 세션, DB membership 재확인, 역할 claim 불신    | 인증 단위 테스트, production demo-auth 차단 |
-| 교차 테넌트 접근             | API 소속 검사, repository tenant filter, 복합 FK, PostgreSQL RLS, 별도 app/worker 역할                           | tenant isolation 테스트, CI RLS 계약 테스트 |
-| 악성·위장 파일               | 허용 목록, 크기 제한, 정규화 파일명, MIME/확장자/magic bytes 일치, SHA-256, quarantine, ClamAV                   | 파일 검증 테스트와 E2E 거부 흐름            |
-| 검역 전·미승인 근거 검색     | `INDEXED`, `APPROVED`, `SAFE`, current chunk와 과세기간 효력을 모두 만족하는 근거만 검색                         | retrieval 테스트, 실제 PostgreSQL 계약      |
-| prompt injection·도구 오용   | 질문 guardrail, 문서 필드의 인증된 의미 분류, fail-closed 정책, 제한된 단계, 고정 tool schema와 stream allowlist | 직접·간접 injection과 위조 stream 테스트    |
-| 근거 없는 세무 결론          | exact citation 검사, 독립 verifier, 기권 경로, 승인 전 초안 상태                                                 | golden set 평가, 인용 E2E                   |
-| 승인 위조·재사용             | 독립 Reviewer OIDC resource, 암호화 봉투, HMAC 토큰, reviewer/action/artifact hash 바인딩, 원자적 DB 전이        | 토큰 변조·잘못된 행위·재사용 HTTP 계약      |
-| 감사 기록 변조               | 테넌트별 advisory lock, 이전 해시 연결, DB update/delete 차단, 전체 체인 DB 재계산                               | 해시 단위 테스트, PostgreSQL 전체 체인 계약 |
-| 로그·AI 반출을 통한 PII 유출 | allowlist 로그, 패턴 redaction, 원문·토큰 비기록 telemetry, tenant 반출 정책과 provider 처리 지역 검증           | redaction·AI 정책 테스트와 코드 검토        |
-| MCP DNS rebinding·권한 확대  | Host/Origin allowlist, 기존 OIDC/RBAC 재사용, read-only tool annotation, raw token 미보관                        | 공식 MCP 클라이언트 E2E                     |
-| 비용·지연 폭주               | PostgreSQL 공유 rate limit, 월간 원자적 예산 예약, 8-step·token·cost 상한, timeout과 retry 제한                  | budget 테스트와 평가 report                 |
+| 위협                           | 통제                                                                                                                         | 검증                                         |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 위조된 사용자와 역할           | Authorization Code + PKCE, `state`, `nonce`, 발급자와 대상 및 알고리즘 고정, HttpOnly 세션, DB 소속 재확인, 역할 클레임 불신 | 인증 단위 테스트, 운영 환경의 데모 인증 차단 |
+| 다른 조직 접근                 | API 소속 검사, 저장소 조직 필터, 복합 FK, PostgreSQL RLS, 별도 앱·워커 역할                                                  | 조직 격리 테스트, CI RLS 계약 테스트         |
+| 악성 또는 위장 파일            | 허용 목록, 크기 제한, 정규화 파일명, MIME과 확장자 및 파일 서명 일치, SHA-256, 격리 저장, ClamAV                             | 파일 검증 테스트와 E2E 거부 흐름             |
+| 검역 전·미승인 근거 검색       | `INDEXED`, `APPROVED`, `SAFE`, 현재 청크와 과세기간 효력을 모두 만족하는 근거만 검색                                         | 검색 테스트, 실제 PostgreSQL 계약            |
+| 프롬프트 인젝션·도구 오용      | 질문 안전 통제, 자료 필드의 인증된 의미 분류, 오류 시 차단 정책, 제한된 단계, 고정 도구 스키마와 스트림 허용 목록            | 직접·간접 인젝션과 위조 스트림 테스트        |
+| 근거 없는 세무 결론            | 인용문 정확성 검사, 독립 검증 에이전트, 답변 보류 경로, 승인 전 초안 상태                                                    | 기준 평가 세트, 인용 E2E                     |
+| 승인 위조 또는 재사용          | 독립 검토 서비스용 OIDC 대상, 암호화 봉투, HMAC 토큰, 검토자와 행위 및 산출물 해시 결합, 원자적 DB 전이                      | 토큰 변조, 잘못된 행위와 재사용 HTTP 계약    |
+| 감사 기록 변조                 | 조직별 advisory lock, 이전 해시 연결, DB 갱신·삭제 차단, 전체 체인 DB 재계산                                                 | 해시 단위 테스트, PostgreSQL 전체 체인 계약  |
+| 로그와 AI 반출을 통한 PII 유출 | 허용 목록 로그, 패턴 비식별화, 원문과 토큰을 기록하지 않는 관측 데이터, 조직 반출 정책과 제공자 처리 지역 검증               | 비식별화와 AI 정책 테스트, 코드 검토         |
+| MCP DNS 재바인딩과 권한 확대   | Host와 Origin 허용 목록, 기존 OIDC와 RBAC 재사용, 읽기 전용 도구 표시, 원본 토큰 미보관                                      | 공식 MCP 클라이언트 E2E                      |
+| 비용과 지연 폭주               | PostgreSQL 공유 요청 제한, 월간 원자적 예산 예약, 단계와 토큰 및 비용 상한, 시간 제한과 재시도 제한                          | 예산 테스트와 평가 보고서                    |
 
 ## 운영 전 필수 보강
 
-- 조직 IdP에 redirect URI와 PKCE client를 등록하고 access token·서명 세션 수명 정책 확정
-- KMS key policy, VPC endpoint, S3 bucket policy, egress allowlist 검토
-- PostgreSQL 공유 rate limit bucket의 보존 기간과 정리 작업 확정
-- 악성 파일 샘플, zip bomb, parser 취약점, SSRF를 포함한 침투 시험
-- PII 분류·마스킹, 보존·파기, 법적 hold 정책과 개인정보 영향평가
+- 조직 IdP에 리디렉션 URI와 PKCE 클라이언트를 등록하고 액세스 토큰·서명 세션 수명 정책 확정
+- KMS 키 정책, VPC 엔드포인트, S3 버킷 정책과 외부 통신 허용 목록 검토
+- PostgreSQL 공유 요청 제한 버킷의 보존 기간과 정리 작업 확정
+- 악성 파일 샘플, 압축 폭탄, 파서 취약점과 SSRF를 포함한 침투 시험
+- PII 분류·마스킹, 보존·파기, 법적 보존 정책과 개인정보 영향평가
 - 감사 로그 외부 불변 저장소 전송과 탐지 규칙 구성
-- 공식 법령·예규 connector가 발행기관 서명 또는 승인된 digest를 검증하도록 구성
-- 실제 의미 분류기 endpoint에서 한국어·영어 paraphrase, 인코딩, 간접 지시, 정상 문서 오탐과 p95 지연을 측정하고 승인된 modelVersion을 고정
-- 의존성 SBOM, 이미지 서명, secret scan, SAST/DAST를 조직 CI에 연결
+- 공식 법령·예규 연계 서비스가 발행기관 서명 또는 승인된 다이제스트를 검증하도록 구성
+- 실제 의미 분류기 엔드포인트에서 한국어·영어 표현 변형, 인코딩, 간접 지시, 정상 자료 오탐과 p95 지연을 측정하고 승인된 `modelVersion`을 고정
+- 의존성 SBOM, 이미지 서명, 비밀값 검사와 SAST·DAST를 조직 CI에 연결
 
-로컬 데모는 프로세스 메모리 rate limiter를 사용하지만, `DATABASE_URL`이 있는 다중 인스턴스 환경에서는 PostgreSQL의 원자적 bucket과 승인 행 상태 전이를 사용합니다.
+로컬 데모는 프로세스 메모리 요청 제한기를 사용하지만, `DATABASE_URL`이 있는 다중 인스턴스 환경에서는 PostgreSQL의 원자적 버킷과 승인 행 상태 전이를 사용합니다.
 
-DB 감사 체인은 전체 이벤트를 다시 해시해 누락과 변조를 탐지하지만 DB 소유자와 독립된 불변 증거는 아닙니다. production에서는 주기적으로 head hash와 건수를 서명해 Object Lock 또는 조직 SIEM의 WORM 저장소에 보관해야 합니다. `TAXOPS_LOCAL_STACK=true`는 의미 분류기와 일부 외부 서비스를 로컬 대체 경로로 실행하기 위한 시험 전용 설정이며 production task definition에는 주입하지 않습니다.
+DB 감사 체인은 전체 이벤트를 다시 해시해 누락과 변조를 탐지하지만 DB 소유자와 독립된 불변 증거는 아닙니다. 운영 환경에서는 주기적으로 최종 해시와 건수를 서명해 Object Lock 또는 조직 SIEM의 WORM 저장소에 보관해야 합니다.
 
-`npm audit --omit=dev` 기준 production 의존성은 알려진 취약점 0건입니다. 전체 감사에는 현재 `drizzle-kit`이 중첩 참조하는 개발 서버용 구버전 `esbuild` 때문에 moderate 권고 4건이 남습니다. 감사 도구가 제시하는 해결책은 Drizzle을 호환되지 않는 구버전으로 내리는 것이므로 적용하지 않았습니다. migration CLI는 CI·개발 환경에서만 실행하고 네트워크에 노출하지 않으며, 상위 패키지의 수정 릴리스를 추적해야 합니다.
+`TAXOPS_LOCAL_STACK=true`는 의미 분류기와 일부 외부 서비스를 로컬 대체 경로로 실행하기 위한 시험 전용 설정입니다. 운영 작업 정의에는 주입하지 않습니다.
+
+`npm audit --omit=dev` 기준 운영 의존성은 알려진 취약점 0건입니다. 전체 감사에는 현재 `drizzle-kit`이 중첩 참조하는 개발 서버용 구버전 `esbuild` 때문에 보통 심각도 권고 4건이 남습니다. 감사 도구가 제시하는 해결책은 Drizzle을 호환되지 않는 구버전으로 내리는 것이므로 적용하지 않았습니다.
+
+마이그레이션 CLI는 CI와 개발 환경에서만 실행하고 네트워크에 노출하지 않습니다. 상위 패키지의 수정 릴리스도 추적해야 합니다.

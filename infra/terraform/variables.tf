@@ -75,6 +75,16 @@ variable "ai_gateway_key_secret_arn" {
   type = string
 }
 
+variable "ai_prompt_version" {
+  type        = string
+  description = "Code-registered tax memo prompt selected at runtime."
+  default     = "tax-memo.v1.3.1"
+  validation {
+    condition     = contains(["tax-memo.v1.3.0", "tax-memo.v1.3.1"], var.ai_prompt_version)
+    error_message = "ai_prompt_version must name a prompt asset registered in this release."
+  }
+}
+
 variable "secret_kms_key_arns" {
   type        = list(string)
   description = "Customer-managed KMS key ARNs used by externally supplied Secrets Manager secrets."

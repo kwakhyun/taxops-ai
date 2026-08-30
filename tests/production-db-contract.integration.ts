@@ -16,6 +16,11 @@ import { evidenceManifestHash } from "@/lib/documents/evidence-manifest";
 import { hashWorkpaperArtifact } from "@/lib/workpapers/artifact";
 import { resolveTenantAiPolicy } from "@/lib/security/ai-policy";
 import { verifiedToolOutputOnlyTransform } from "@/lib/ai/stream-policy";
+import {
+  DEFAULT_TAX_MEMO_PROMPT_ID,
+  resolveTaxMemoPrompt,
+  taxMemoPromptAssets,
+} from "@/lib/ai/prompts/tax-memo.v1";
 import type { SessionUser } from "@/lib/domain/types";
 import {
   createMatter,
@@ -41,6 +46,7 @@ const isolatedUserId = "00000000-0000-4000-8000-000000000104";
 const isolatedReviewerId = "00000000-0000-4000-8000-000000000105";
 const isolatedClientId = "00000000-0000-4000-8000-000000000202";
 const isolatedMatterId = "00000000-0000-4000-8000-000000000303";
+const defaultPrompt = resolveTaxMemoPrompt(DEFAULT_TAX_MEMO_PROMPT_ID);
 const reviewTargetId = "00000000-0000-4000-8000-000000000641";
 const reviewApprovalId = "00000000-0000-4000-8000-000000000642";
 const reviewRunId = "00000000-0000-4000-8000-000000000902";
@@ -522,6 +528,30 @@ afterAll(async () => {
 });
 
 describe("PostgreSQL production contracts", () => {
+  it("keeps database prompt assets aligned with the code registry", async () => {
+    const rows = await owner<
+      Array<{
+        version: string;
+        content_hash: string;
+        content: string;
+        is_active: boolean;
+      }>
+    >`
+      SELECT version, content_hash, content, is_active
+      FROM prompt_versions
+      WHERE name = 'tax-memo'
+      ORDER BY version
+    `;
+    expect(rows).toEqual(
+      taxMemoPromptAssets.map((prompt) => ({
+        version: prompt.version,
+        content_hash: prompt.contentHash,
+        content: prompt.content,
+        is_active: prompt.id === DEFAULT_TAX_MEMO_PROMPT_ID,
+      })),
+    );
+  });
+
   it("returns only indexed document bindings within the active tenant", async () => {
     const indexed = await getDocumentDownload(analyst, contractDocumentIds[0]!);
     expect(indexed).toEqual({
@@ -953,6 +983,8 @@ describe("PostgreSQL production contracts", () => {
         runId: "00000000-0000-4000-8000-000000000901",
         traceId: "tr_self_review",
         taxReferenceDate: "2025-12-31T23:59:59+09:00",
+        promptVersion: defaultPrompt.id,
+        promptHash: defaultPrompt.contentHash,
         title: "자기 검토 차단 계약",
         conclusion: "검토자가 작성자이면 승인 요청을 만들 수 없습니다.",
         evidenceIds: [contractChunkIds[0]!],
@@ -960,6 +992,48 @@ describe("PostgreSQL production contracts", () => {
         calculations: [],
       }),
     ).rejects.toThrow(/작성자와 검토자가 분리/);
+  });
+
+  it("binds workpaper provenance to the prompt recorded by the agent run", async () => {
+    const traceId = `tr_prompt_binding_${crypto.randomUUID()}`;
+    const runId = await startAgentRun(analyst, {
+      matterId: primaryMatterId,
+      traceId,
+      modelId: "contract-primary",
+      monthlyBudgetKrw: 1_000_000,
+    });
+    try {
+      await expect(
+        createWorkpaperDraft({
+          tenantId,
+          matterId: primaryMatterId,
+          actorId: analyst.id,
+          runId,
+          traceId,
+          taxReferenceDate: "2025-12-31T23:59:59+09:00",
+          promptVersion: defaultPrompt.id,
+          promptHash: "f".repeat(64),
+          title: "프롬프트 출처 결합 계약",
+          conclusion:
+            "실행에 기록된 프롬프트와 다른 해시로 검토조서를 만들 수 없습니다.",
+          evidenceIds: [contractChunkIds[0]!],
+          evidenceHashes: {
+            [contractChunkIds[0]!]: sha256(searchableContent),
+          },
+          calculations: [],
+        }),
+      ).rejects.toThrow(/현재 세무 업무의 유효한 근거/);
+    } finally {
+      await finishAgentRun(analyst, {
+        runId,
+        status: "FAILED",
+        inputTokens: 0,
+        outputTokens: 0,
+        estimatedCostKrw: 0,
+        latencyMs: 1,
+        errorCode: "PROMPT_PROVENANCE_MISMATCH",
+      });
+    }
   });
 
   it("keeps workpaper lineage behind the bounded application function", async () => {

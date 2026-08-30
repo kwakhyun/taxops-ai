@@ -478,6 +478,7 @@ export const agentRuns = pgTable(
     traceId: varchar("trace_id", { length: 80 }).notNull(),
     modelId: varchar("model_id", { length: 120 }).notNull(),
     promptVersion: varchar("prompt_version", { length: 40 }).notNull(),
+    promptHash: varchar("prompt_hash", { length: 64 }),
     retrieverVersion: varchar("retriever_version", { length: 40 }).notNull(),
     policyVersion: varchar("policy_version", { length: 40 }).notNull(),
     inputTokens: integer("input_tokens").default(0).notNull(),
@@ -500,6 +501,10 @@ export const agentRuns = pgTable(
       table.tenantId,
       table.matterId,
       table.startedAt,
+    ),
+    check(
+      "agent_runs_prompt_hash_valid",
+      sql`${table.promptHash} IS NULL OR ${table.promptHash} ~ '^[a-f0-9]{64}$'`,
     ),
   ],
 );

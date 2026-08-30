@@ -1,16 +1,21 @@
-# AWS deployment module
+# AWS 배포 참조 모듈
 
-This composition module provisions the stateful and runtime resources owned by TaxOps AI: KMS, a private versioned S3 bucket, Multi-AZ RDS PostgreSQL, ECS Fargate web, worker, and isolated reviewer services, task IAM, encrypted CloudWatch log groups, alarms, an operations dashboard, and web autoscaling.
+이 모듈은 TaxOps AI가 소유하는 상태 저장 자원과 실행 환경을 구성합니다. 대상에는 KMS, 비공개 버전 관리 S3 버킷, 다중 가용 영역 RDS PostgreSQL이 포함됩니다.
 
-It intentionally accepts an existing VPC, private subnets, ALB target group, private ClamAV endpoint, document-processing endpoint, DLP endpoint, semantic injection-classifier endpoint, and alarm topics. Network foundations, public DNS, WAF, certificate issuance, identity-provider configuration, immutable audit export, and organization-wide security controls normally belong to a shared platform stack.
+ECS Fargate 웹, 워커와 독립 검토 서비스도 구성합니다. 작업 IAM, 암호화된 CloudWatch 로그 그룹, 경보, 운영 대시보드와 웹 자동 확장도 이 모듈의 범위입니다.
 
-Before applying:
+기존 VPC, 비공개 서브넷, ALB 대상 그룹과 경보 주제는 입력값으로 받습니다. ClamAV, 문서 처리, 개인정보 비식별화와 의미 분류 엔드포인트도 비공개 주소로 입력합니다.
 
-1. Publish immutable web, worker, and reviewer images from the CI commit SHA.
-2. Create separate Secrets Manager values for the RLS application, restricted worker, and reviewer database roles. Do not use the RDS owner account at runtime.
-3. Run the Drizzle migration as a controlled one-off task, then seed only non-production environments.
-4. Enable AWS Config, GuardDuty, Security Hub, VPC endpoints, backup policies, and log export according to the organization baseline.
-5. Verify that the DLP, semantic classifier, document processor, and notification endpoints are private or egress-allowlisted and guarantee the configured processing region.
-6. Replace the example variables and review the plan with the cloud and security owners.
+네트워크 기반, 공개 DNS, WAF, 인증서 발급, 자격 증명 공급자 설정, 변경 불가능한 감사 로그 반출과 조직 공통 보안 통제는 일반적으로 공용 플랫폼 스택이 담당합니다.
 
-The module is a deployment reference, not proof that this repository has been applied to an AWS account.
+적용 전 확인 사항은 다음과 같습니다.
+
+1. CI 커밋 SHA에서 웹, 워커와 검토 서비스의 변경 불가능한 이미지를 발행합니다.
+2. RLS 애플리케이션, 제한된 워커와 검토 서비스 DB 역할별 Secrets Manager 값을 만듭니다. 실행 환경에서 RDS 소유자 계정을 사용하면 안 됩니다.
+3. Drizzle 마이그레이션을 통제된 일회성 작업으로 실행하고, 초기 데이터는 비운영 환경에만 넣습니다.
+4. 조직 보안 기준에 따라 AWS Config, GuardDuty, Security Hub, VPC 엔드포인트, 백업 정책과 로그 반출을 활성화합니다.
+5. 개인정보 비식별화, 의미 분류, 문서 처리와 알림 엔드포인트가 비공개이거나 송신 허용 목록에 포함되어 있는지 확인합니다. 설정한 처리 지역도 보장해야 합니다.
+6. `ai_prompt_version`이 코드에 등록되어 있고 평가 보고서의 `promptVersion` 및 `promptHash`와 일치하는지 확인합니다.
+7. 예시 변수를 실제 값으로 교체하고 클라우드·보안 담당자와 Terraform 실행 계획을 검토합니다.
+
+이 모듈은 배포 참조 구현입니다. 저장소가 실제 AWS 계정에 적용되었다는 증거는 아닙니다.

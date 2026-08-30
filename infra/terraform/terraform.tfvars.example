@@ -11,6 +11,7 @@ review_service_shared_secret_arn = "arn:aws:secretsmanager:ap-northeast-2:123456
 worker_database_url_secret_arn = "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:taxops/worker-db"
 terraform_deployer_role_arn = "arn:aws:iam::123456789012:role/taxops-terraform"
 ai_gateway_key_secret_arn  = "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:taxops/ai"
+ai_prompt_version          = "tax-memo.v1.3.1"
 secret_kms_key_arns        = ["arn:aws:kms:ap-northeast-2:123456789012:key/replace-me"]
 pii_dlp_url                = "https://pii-dlp.service.internal/v1/redact"
 pii_dlp_token_secret_arn   = "arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:taxops/pii-dlp"

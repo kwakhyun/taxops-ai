@@ -3,7 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type postgres from "postgres";
 import { defaultAiBudget } from "@/lib/ai/budget";
-import { taxMemoPrompt, taxMemoPromptHash } from "@/lib/ai/prompts/tax-memo.v1";
+import { resolveTaxMemoPrompt } from "@/lib/ai/prompts/tax-memo.v1";
 import { RETRIEVER_VERSION } from "@/lib/ai/retrieval";
 import { withTenantSql } from "@/lib/db/client";
 import type { SessionUser } from "@/lib/domain/types";
@@ -64,6 +64,7 @@ export async function startAgentRun(
     monthlyBudgetKrw: number;
   },
 ) {
+  const prompt = resolveTaxMemoPrompt();
   return withTenantSql(user.tenantId, async (transaction) => {
     const staleRuns = await transaction<
       Array<{ id: string; actor_id: string; trace_id: string }>
@@ -106,11 +107,13 @@ export async function startAgentRun(
     const rows = await transaction<{ id: string }[]>`
       INSERT INTO agent_runs (
         tenant_id, matter_id, actor_id, workflow_status, trace_id, model_id,
-        prompt_version, retriever_version, policy_version, estimated_cost_krw
+        prompt_version, prompt_hash, retriever_version, policy_version,
+        estimated_cost_krw
       )
       SELECT ${user.tenantId}, matter.id, ${user.id}, 'INTAKE',
-             ${input.traceId}, ${input.modelId}, ${taxMemoPrompt.version},
-             ${RETRIEVER_VERSION}, 'tenant-ai-policy.v1',
+             ${input.traceId}, ${input.modelId}, ${prompt.id},
+             ${prompt.contentHash}, ${RETRIEVER_VERSION},
+             'tenant-ai-policy.v1',
              ${defaultAiBudget.maxEstimatedCostKrw}
       FROM matters matter
       WHERE matter.tenant_id = ${user.tenantId}
@@ -256,6 +259,8 @@ export async function createWorkpaperDraft(input: {
   runId: string;
   traceId: string;
   taxReferenceDate: string;
+  promptVersion: string;
+  promptHash: string;
   title: string;
   conclusion: string;
   evidenceIds: string[];
@@ -285,6 +290,8 @@ export async function createWorkpaperDraft(input: {
         AND run.id::text = ${input.runId}
         AND run.actor_id::text = ${input.actorId}
         AND run.trace_id = ${input.traceId}
+        AND run.prompt_version = ${input.promptVersion}
+        AND run.prompt_hash = ${input.promptHash}
         AND run.workflow_status IN ('INTAKE', 'VERIFY')
         AND run.completed_at IS NULL
     `;
@@ -333,8 +340,8 @@ export async function createWorkpaperDraft(input: {
     const provenance = {
       runId: input.runId,
       traceId: input.traceId,
-      promptVersion: taxMemoPrompt.version,
-      promptHash: taxMemoPromptHash,
+      promptVersion: input.promptVersion,
+      promptHash: input.promptHash,
       retrieverVersion: RETRIEVER_VERSION,
       taxReferenceDate: input.taxReferenceDate,
     };
