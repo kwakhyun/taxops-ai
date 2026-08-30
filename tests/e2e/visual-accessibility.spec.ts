@@ -103,10 +103,10 @@ test.describe("TaxOps AI accessibility and visual baselines", () => {
     ).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await expectReadableTypography(page);
-    await expectNoAccessibilityViolations(page);
     await expect(page).toHaveScreenshot("dashboard-desktop.png", {
       fullPage: true,
     });
+    await expectNoAccessibilityViolations(page);
   });
 
   test("mobile engagement journey stays accessible and visually stable", async ({
@@ -125,10 +125,14 @@ test.describe("TaxOps AI accessibility and visual baselines", () => {
     ).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await expectReadableTypography(page);
-    await expectNoAccessibilityViolations(page);
+    await expect(
+      page.getByRole("button", { name: "메뉴 열기", exact: true }),
+    ).toBeInViewport({ ratio: 1 });
+    // Capture the entry state before Axe inspects and restores scroll positions.
     await expect(page).toHaveScreenshot("engagement-mobile.png", {
       fullPage: false,
     });
+    await expectNoAccessibilityViolations(page);
   });
 
   test("mobile AI Partner keeps conversation and evidence accessible", async ({
