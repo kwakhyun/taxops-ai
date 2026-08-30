@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { oidcReviewAccessCookie, oidcSessionCookie } from "@/lib/auth/session";
+import { cookies } from "next/headers";
+import {
+  oidcReviewAccessCookie,
+  oidcSessionCookie,
+  revokeOidcSession,
+} from "@/lib/auth/session";
 
 export async function POST(request: Request) {
+  const session = (await cookies()).get(oidcSessionCookie)?.value;
+  if (session) await revokeOidcSession(session);
   const response = NextResponse.redirect(
     new URL("/api/auth/login", request.url),
     {

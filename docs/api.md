@@ -1,6 +1,6 @@
 # API와 MCP 계약
 
-모든 REST 응답은 `x-request-id`를 돌려주며 오류는 `{ error: { code, message }, meta: { requestId } }` 형태를 사용합니다. 운영 환경의 브라우저는 OIDC Authorization Code + PKCE로 서명된 HttpOnly 세션을 받고, API와 MCP 클라이언트는 OIDC Bearer 토큰을 사용합니다.
+모든 REST 응답은 `x-request-id`를 돌려주며 오류는 `{ error: { code, message }, meta: { requestId } }` 형태를 사용합니다. 운영 환경의 브라우저는 OIDC Authorization Code + PKCE로 서명된 HttpOnly 세션을 받습니다. 세션 `jti`는 DB 활성 상태와 매 요청 대조하며 로그아웃 시 즉시 폐기합니다. API와 MCP 클라이언트는 OIDC Bearer 토큰을 사용합니다.
 
 토큰의 역할과 조직 소속 클레임을 그대로 신뢰하지 않고 DB에서 다시 확인합니다. 쿠키 기반 쓰기 요청은 등록된 `APP_BASE_URL` Origin만 허용합니다.
 
@@ -14,7 +14,7 @@
 | GET         | `/api/v1/cases`                  | `case:read`        | 현재 조직의 세무 업무 목록                                               |
 | POST        | `/api/v1/cases`                  | `case:write`       | 세무 업무 생성                                                           |
 | POST        | `/api/v1/uploads`                | `document:upload`  | 검증 후 격리 저장하고 비동기 작업을 큐에 등록                            |
-| GET         | `/api/v1/documents/:id/download` | `document:read`    | 현재 조직에서 색인 완료된 원본 자료 내려받기                             |
+| GET         | `/api/v1/documents/:id/download` | `document:read`    | 현재 조직에서 색인 완료되고 객체 체크섬이 확인된 원본 자료 내려받기      |
 | GET         | `/api/v1/documents/:id/evidence` | `workpaper:review` | 담당 세무 검토자용 추출 내용과 전체 체크섬 조회                          |
 | PATCH       | `/api/v1/documents/:id/evidence` | `workpaper:review` | 체크섬에 고정해 AI 근거로 승인 또는 제외                                 |
 | GET         | `/api/v1/jobs/:id`               | `document:read`    | 현재 조직의 작업 상태 조회                                               |

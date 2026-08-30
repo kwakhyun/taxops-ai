@@ -42,6 +42,13 @@ export class LeaseLostError extends Error {
   }
 }
 
+export class OutboxLeaseLostError extends Error {
+  constructor() {
+    super("Outbox lease is no longer owned by this worker");
+    this.name = "OutboxLeaseLostError";
+  }
+}
+
 export class MalwareDetectedError extends Error {
   readonly permanent = true;
 

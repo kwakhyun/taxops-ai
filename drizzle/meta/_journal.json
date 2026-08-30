@@ -92,6 +92,13 @@
       "when": 1788051600000,
       "tag": "0012_prompt_asset_configuration",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788055200000,
+      "tag": "0013_session_and_outbox_leases",
+      "breakpoints": true
     }
   ]
 }

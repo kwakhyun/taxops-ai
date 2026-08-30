@@ -23,6 +23,11 @@ import {
 } from "@/lib/ai/prompts/tax-memo.v1";
 import type { SessionUser } from "@/lib/domain/types";
 import {
+  issueOidcSession,
+  revokeOidcSession,
+  validateOidcSessionToken,
+} from "@/lib/auth/session";
+import {
   createMatter,
   createWorkpaperDraft,
   finishAgentRun,
@@ -528,6 +533,123 @@ afterAll(async () => {
 });
 
 describe("PostgreSQL production contracts", () => {
+  it("revokes a browser session by its server-side jti binding", async () => {
+    const previousSessionSecret = process.env.SESSION_SECRET;
+    process.env.SESSION_SECRET = "s".repeat(48);
+    await owner`
+      DELETE FROM web_sessions
+      WHERE tenant_id = ${tenantId} AND oidc_subject = 'oidc|analyst'
+    `;
+    try {
+      const token = await issueOidcSession({
+        subject: "oidc|analyst",
+        tenantId,
+      });
+      await expect(validateOidcSessionToken(token)).resolves.toMatchObject({
+        sub: "oidc|analyst",
+        tenant_id: tenantId,
+      });
+      await revokeOidcSession(token);
+      await expect(validateOidcSessionToken(token)).rejects.toThrow(
+        /revoked or expired/,
+      );
+      const rows = await owner<Array<{ revoked_at: Date | null }>>`
+        SELECT revoked_at FROM web_sessions
+        WHERE tenant_id = ${tenantId} AND oidc_subject = 'oidc|analyst'
+      `;
+      expect(rows).toEqual([{ revoked_at: expect.any(Date) }]);
+    } finally {
+      await owner`
+        DELETE FROM web_sessions
+        WHERE tenant_id = ${tenantId} AND oidc_subject = 'oidc|analyst'
+      `;
+      if (previousSessionSecret === undefined)
+        delete process.env.SESSION_SECRET;
+      else process.env.SESSION_SECRET = previousSessionSecret;
+    }
+  });
+
+  it("keeps an outbox event exclusively leased during webhook delivery", async () => {
+    const fixtureId = "00000000-0000-4000-8000-000000000996";
+    const previousPending = await owner<
+      Array<{
+        id: string;
+        available_at: Date;
+        lease_owner: string | null;
+        lease_expires_at: Date | null;
+      }>
+    >`
+      SELECT id::text, available_at, lease_owner, lease_expires_at
+      FROM outbox_events
+      WHERE published_at IS NULL AND id <> ${fixtureId}::uuid
+    `;
+    await owner`
+      UPDATE outbox_events
+      SET available_at = '2100-01-01T00:00:00Z',
+          lease_owner = NULL, lease_expires_at = NULL
+      WHERE published_at IS NULL AND id <> ${fixtureId}::uuid
+    `;
+    await owner`DELETE FROM outbox_events WHERE id = ${fixtureId}::uuid`;
+    await owner`
+      INSERT INTO outbox_events (
+        id, tenant_id, topic, aggregate_type, aggregate_id, payload,
+        idempotency_key, available_at
+      ) VALUES (
+        ${fixtureId}::uuid, ${tenantId}::uuid, 'contract.lease', 'matter',
+        ${primaryMatterId}::uuid, '{}'::jsonb,
+        'contract-outbox-exclusive-lease', '2000-01-01T00:00:00Z'
+      )
+    `;
+    try {
+      const first = await worker<
+        Array<{ id: string; attempts: number }>
+      >`SELECT id::text, attempts FROM claim_next_outbox('contract-worker-a')`;
+      const second = await worker<
+        Array<{ id: string; attempts: number }>
+      >`SELECT id::text, attempts FROM claim_next_outbox('contract-worker-b')`;
+      expect(first).toEqual([{ id: fixtureId, attempts: 1 }]);
+      expect(second).toEqual([]);
+      const lease = await owner<
+        Array<{ lease_owner: string | null; lease_seconds: string }>
+      >`
+        SELECT lease_owner,
+               extract(epoch FROM (lease_expires_at - now()))::text AS lease_seconds
+        FROM outbox_events WHERE id = ${fixtureId}::uuid
+      `;
+      expect(lease[0]?.lease_owner).toBe("contract-worker-a");
+      expect(Number(lease[0]?.lease_seconds)).toBeGreaterThan(20);
+
+      await owner`
+        UPDATE outbox_events
+        SET attempts = 0, lease_owner = NULL, lease_expires_at = NULL
+        WHERE id = ${fixtureId}::uuid
+      `;
+      const legacyClaim = await worker<
+        Array<{ id: string; attempts: number }>
+      >`SELECT id::text, attempts FROM claim_next_outbox()`;
+      const afterLegacyClaim = await worker<
+        Array<{ id: string; attempts: number }>
+      >`SELECT id::text, attempts FROM claim_next_outbox('contract-worker-c')`;
+      expect(legacyClaim).toEqual([{ id: fixtureId, attempts: 1 }]);
+      expect(afterLegacyClaim).toEqual([]);
+      const legacyLease = await owner<Array<{ lease_owner: string | null }>>`
+        SELECT lease_owner FROM outbox_events WHERE id = ${fixtureId}::uuid
+      `;
+      expect(legacyLease[0]?.lease_owner).toMatch(/^legacy-worker-\d+$/);
+    } finally {
+      await owner`DELETE FROM outbox_events WHERE id = ${fixtureId}::uuid`;
+      for (const event of previousPending) {
+        await owner`
+          UPDATE outbox_events
+          SET available_at = ${event.available_at},
+              lease_owner = ${event.lease_owner},
+              lease_expires_at = ${event.lease_expires_at}
+          WHERE id = ${event.id}::uuid AND published_at IS NULL
+        `;
+      }
+    }
+  });
+
   it("keeps database prompt assets aligned with the code registry", async () => {
     const rows = await owner<
       Array<{

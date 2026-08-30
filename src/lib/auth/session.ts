@@ -8,6 +8,7 @@ import {
   createRemoteJWKSet,
   jwtVerify,
   SignJWT,
+  type JWTPayload,
 } from "jose";
 import { resolveOidcPrincipal } from "@/lib/auth/principal";
 import { AuthenticationError } from "@/lib/auth/session-error";
@@ -19,6 +20,11 @@ import {
   webSessionValidationOptions,
 } from "@/lib/auth/token-policy";
 import { isPortfolioDemo } from "@/lib/runtime/portfolio-demo";
+import {
+  assertWebSessionActive,
+  registerWebSession,
+  revokeWebSession,
+} from "@/lib/auth/session-store";
 
 const DEMO_COOKIE = "taxops_demo_user";
 const OIDC_SESSION_COOKIE = "taxops_session";
@@ -91,15 +97,67 @@ export async function issueOidcSession(input: {
   subject: string;
   tenantId: string;
 }) {
-  return new SignJWT({ tenant_id: input.tenantId })
+  const id = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1_000);
+  const token = await new SignJWT({ tenant_id: input.tenantId })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(input.subject)
     .setIssuer("taxops-ai")
     .setAudience("taxops-web")
     .setIssuedAt()
-    .setExpirationTime("8h")
-    .setJti(crypto.randomUUID())
+    .setExpirationTime(Math.floor(expiresAt.getTime() / 1_000))
+    .setJti(id)
     .sign(sessionKey());
+  await registerWebSession({
+    id,
+    tenantId: input.tenantId,
+    oidcSubject: input.subject,
+    expiresAt,
+  });
+  return token;
+}
+
+function webSessionBinding(payload: {
+  sub?: string;
+  jti?: string;
+  tenant_id?: unknown;
+}) {
+  if (
+    typeof payload.sub !== "string" ||
+    typeof payload.jti !== "string" ||
+    typeof payload.tenant_id !== "string"
+  ) {
+    throw new AuthenticationError("OIDC session claims are incomplete");
+  }
+  return {
+    id: payload.jti,
+    tenantId: payload.tenant_id,
+    oidcSubject: payload.sub,
+  };
+}
+
+export async function validateOidcSessionToken(token: string) {
+  const { payload } = await jwtVerify(
+    token,
+    sessionKey(),
+    webSessionValidationOptions,
+  );
+  await assertWebSessionActive(webSessionBinding(payload));
+  return payload;
+}
+
+export async function revokeOidcSession(token: string) {
+  let payload: JWTPayload;
+  try {
+    ({ payload } = await jwtVerify(
+      token,
+      sessionKey(),
+      webSessionValidationOptions,
+    ));
+  } catch {
+    return;
+  }
+  await revokeWebSession(webSessionBinding(payload));
 }
 
 async function principalFromClaims(payload: {
@@ -135,11 +193,7 @@ async function getOidcSession(): Promise<SessionUser> {
     throw new AuthenticationError("A valid OIDC session is required");
   }
   try {
-    const { payload } = await jwtVerify(
-      session,
-      sessionKey(),
-      webSessionValidationOptions,
-    );
+    const payload = await validateOidcSessionToken(session);
     return principalFromClaims(payload);
   } catch (error) {
     if (error instanceof AuthenticationError) throw error;

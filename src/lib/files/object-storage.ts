@@ -60,6 +60,22 @@ function parseS3ObjectKey(objectKey: string) {
   };
 }
 
+export function assertStoredObjectChecksum(
+  expectedChecksumSha256: string | undefined,
+  storedChecksumSha256: string | undefined,
+) {
+  if (!expectedChecksumSha256) return;
+  if (!storedChecksumSha256) {
+    throw new Error("Stored object is missing its SHA-256 checksum");
+  }
+  const expectedChecksum = Buffer.from(expectedChecksumSha256, "hex").toString(
+    "base64",
+  );
+  if (storedChecksumSha256 !== expectedChecksum) {
+    throw new Error("Stored object checksum does not match the document");
+  }
+}
+
 export async function getStoredObject(input: {
   objectKey: string;
   objectVersionId?: string;
@@ -91,16 +107,7 @@ export async function getStoredObject(input: {
     }),
   );
   if (!stored.Body) return undefined;
-  const expectedChecksum = input.checksumSha256
-    ? Buffer.from(input.checksumSha256, "hex").toString("base64")
-    : undefined;
-  if (
-    expectedChecksum &&
-    stored.ChecksumSHA256 &&
-    stored.ChecksumSHA256 !== expectedChecksum
-  ) {
-    throw new Error("Stored object checksum does not match the document");
-  }
+  assertStoredObjectChecksum(input.checksumSha256, stored.ChecksumSHA256);
   return {
     body: stored.Body.transformToWebStream(),
     contentType: stored.ContentType,

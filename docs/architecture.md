@@ -14,7 +14,7 @@ TaxOps AI는 세무 전문가의 판단을 대체하지 않습니다. 검역된 
 flowchart TB
   Browser[Next.js UI] --> Proxy[요청 ID·CSP·Origin 검사]
   Proxy --> API[Route Handlers]
-  API --> Auth[OIDC + DB membership + RBAC]
+  API --> Auth[OIDC + revocable DB session + RBAC]
   API --> Repo[Repository boundary]
   Repo --> DB[(PostgreSQL + pgvector + RLS)]
   API --> ReviewService[독립 검토 서비스]
@@ -70,9 +70,10 @@ API는 `src/lib/repository` 경계를 통해 데모 저장소와 PostgreSQL 저�
 
 ## 데이터 모델
 
-핵심 데이터 모델은 18개 테이블과 8개 enum으로 구성됩니다. 테이블은 `tenants`, `users`, `memberships`, `clients`, `matters`, `documents`, `document_chunks`, `jobs`, `outbox_events`, `rate_limit_buckets`, `prompt_versions`, `agent_runs`, `retrieval_events`, `tool_calls`, `workpapers`, `workpaper_versions`, `approvals`, `audit_events`입니다. enum은 `membership_role`, `matter_status`, `risk_level`, `document_status`, `job_status`, `workflow_status`, `approval_status`, `audit_outcome`입니다.
+핵심 데이터 모델은 19개 테이블과 8개 enum으로 구성됩니다. 테이블은 `tenants`, `users`, `memberships`, `web_sessions`, `clients`, `matters`, `documents`, `document_chunks`, `jobs`, `outbox_events`, `rate_limit_buckets`, `prompt_versions`, `agent_runs`, `retrieval_events`, `tool_calls`, `workpapers`, `workpaper_versions`, `approvals`, `audit_events`입니다. enum은 `membership_role`, `matter_status`, `risk_level`, `document_status`, `job_status`, `workflow_status`, `approval_status`, `audit_outcome`입니다.
 
 - 모든 고객 데이터는 조직을 식별하는 `tenant_id`를 포함합니다.
+- 브라우저 세션의 `jti`는 `web_sessions`에 기록하며 로그아웃 시 즉시 폐기합니다.
 - 중요한 관계는 조직 ID를 포함한 복합 외래 키로 연결합니다.
 - RLS는 요청별 `app.tenant_id` 설정을 기준으로 읽기와 쓰기를 제한합니다.
 - 감사 이벤트는 이전 해시를 포함하고 애플리케이션에서 수정·삭제할 수 없습니다. DB 검증기가 조회 제한과 무관하게 해당 조직의 전체 체인을 재계산합니다.
@@ -84,5 +85,6 @@ API는 `src/lib/repository` 경계를 통해 데모 저장소와 PostgreSQL 저�
 - 검색 결과 없음: 답변을 보류하고 필요한 자료를 안내합니다.
 - 파일 처리 실패: 문서를 `FAILED`로 표시하고 검색에서 제외합니다.
 - 워커 중단: 임대 시간이 끝나면 다른 워커가 작업을 다시 임대합니다.
+- 알림 전송 중단: Outbox 임대가 만료된 뒤 다른 워커가 같은 멱등성 키로 다시 전송합니다.
 - 승인 토큰 재사용: 행위와 산출물 해시에 결합된 서명을 검증하고, 조건부 DB 갱신으로 `PENDING`을 정확히 한 번만 전이합니다. 최종 함수는 최소 1건의 근거 ID, 원문, 위치, 출처 유형, 출처 이력과 해시를 현재 DB 필드와 대조하고 승인 기록과 AI 실행 상태를 한 트랜잭션에서 전이합니다.
 - DB 또는 필수 운영 설정 누락: 준비 상태 API가 503을 반환합니다.

@@ -120,6 +120,31 @@ export const memberships = pgTable(
   ],
 );
 
+export const webSessions = pgTable(
+  "web_sessions",
+  {
+    id: uuid("id").primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    oidcSubject: text("oidc_subject")
+      .notNull()
+      .references(() => users.oidcSubject, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("web_sessions_tenant_expiry_idx").on(table.tenantId, table.expiresAt),
+    check(
+      "web_sessions_expiry_after_creation",
+      sql`${table.expiresAt} > ${table.createdAt}`,
+    ),
+  ],
+);
+
 export const clients = pgTable(
   "clients",
   {
@@ -412,6 +437,8 @@ export const outboxEvents = pgTable(
     availableAt: timestamp("available_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    leaseOwner: text("lease_owner"),
+    leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
     lastErrorCode: varchar("last_error_code", { length: 80 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -422,7 +449,15 @@ export const outboxEvents = pgTable(
       table.tenantId,
       table.idempotencyKey,
     ),
-    index("outbox_unpublished_idx").on(table.publishedAt, table.availableAt),
+    index("outbox_unpublished_idx").on(
+      table.publishedAt,
+      table.availableAt,
+      table.leaseExpiresAt,
+    ),
+    check(
+      "outbox_lease_pair_complete",
+      sql`(${table.leaseOwner} IS NULL) = (${table.leaseExpiresAt} IS NULL)`,
+    ),
   ],
 );
 

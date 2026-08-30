@@ -8,6 +8,7 @@ import { fetchWithoutRedirect } from "../lib/security/safe-fetch.ts";
 import { workerProductionConfigurationErrors } from "../lib/security/runtime-mode.ts";
 import {
   LeaseLostError,
+  OutboxLeaseLostError,
   type ClaimedJob,
   type ClaimedOutbox,
 } from "./contracts.ts";
@@ -113,9 +114,13 @@ async function claimJob() {
 
 async function claimOutbox() {
   const rows = await database<ClaimedOutbox[]>`
-    SELECT * FROM claim_next_outbox()
+    SELECT * FROM claim_next_outbox(${workerId})
   `;
   return rows[0];
+}
+
+function outboxRetryDelaySeconds(attempts: number) {
+  return Math.min(3_600, 2 ** Math.max(0, attempts - 1) * 5);
 }
 
 async function dispatchOutbox(event: ClaimedOutbox) {
@@ -147,24 +152,34 @@ async function dispatchOutbox(event: ClaimedOutbox) {
     }
     await database.begin(async (transaction) => {
       await transaction`SELECT set_config('app.tenant_id', ${event.tenant_id}, true)`;
-      await transaction`
+      const rows = await transaction<{ id: string }[]>`
         UPDATE outbox_events
-        SET published_at = now(), last_error_code = NULL
+        SET published_at = now(), last_error_code = NULL,
+            lease_owner = NULL, lease_expires_at = NULL
         WHERE id = ${event.id} AND tenant_id = ${event.tenant_id}
           AND published_at IS NULL
+          AND lease_owner = ${workerId}
+        RETURNING id::text
       `;
+      if (!rows[0]) throw new OutboxLeaseLostError();
     });
   } catch (error) {
     const errorCode =
       error instanceof Error ? error.name.slice(0, 80) : "UNKNOWN";
+    const delaySeconds = outboxRetryDelaySeconds(event.attempts);
     await database.begin(async (transaction) => {
       await transaction`SELECT set_config('app.tenant_id', ${event.tenant_id}, true)`;
-      await transaction`
+      const rows = await transaction<{ id: string }[]>`
         UPDATE outbox_events
-        SET last_error_code = ${errorCode}
+        SET last_error_code = ${errorCode},
+            available_at = now() + (${delaySeconds} * interval '1 second'),
+            lease_owner = NULL, lease_expires_at = NULL
         WHERE id = ${event.id} AND tenant_id = ${event.tenant_id}
           AND published_at IS NULL
+          AND lease_owner = ${workerId}
+        RETURNING id::text
       `;
+      if (!rows[0]) throw new OutboxLeaseLostError();
     });
     throw error;
   }
