@@ -13,9 +13,17 @@
 
 ![현재 세무 업무와 검토 대상을 보여 주는 TaxOps AI 대시보드](artifacts/dashboard-visual.png)
 
+## 86초 시연 영상
+
+실무자와 검토자 역할, 승인 상태 변화, 모바일 업무 흐름을 보여 줍니다. 재생 버튼을 누르면 이 페이지에서 바로 볼 수 있습니다. 자막이 포함된 무음 영상이며, 예시 데이터와 결정론적 AI 흐름을 사용합니다.
+
+https://github.com/user-attachments/assets/982b60b5-4995-429e-8822-a78b5ae65eb1
+
+[시연 범위와 장면별 설명](docs/portfolio-demo.md) | [원본 MP4 다운로드](https://github.com/kwakhyun/taxops-ai/raw/refs/heads/main/artifacts/portfolio/taxops-ai-demo.mp4)
+
 ## 5분 검토 방법
 
-설계 의도부터 보려면 [한 페이지 설계 판단](docs/engineering-decisions.md)과 [PDF](output/pdf/taxops-ai-engineering-decisions.pdf)를 확인하세요. [86초 실제 UI 시연](artifacts/portfolio/taxops-ai-demo.mp4)은 실무자와 검토자 역할, 승인 상태 변화, 모바일 흐름을 보여 줍니다. [실제 모델 비교 평가](docs/live-model-evaluation.md)에는 실패한 실험과 수정 전후 결과도 함께 남겼습니다.
+설계 의도부터 보려면 [한 페이지 설계 판단](docs/engineering-decisions.md)과 [PDF](output/pdf/taxops-ai-engineering-decisions.pdf)를 확인하세요. [실제 모델 비교 평가](docs/live-model-evaluation.md)에는 실패한 실험과 수정 전후 결과도 함께 남겼습니다.
 
 1. [라이브 데모](https://taxops-ai.vercel.app)를 열어 전체 업무 현황, 우선 처리 업무와 세무 업무 진행 단계를 확인합니다.
 2. `⌘K` 또는 `Ctrl+K`를 누르고 `리브온`을 검색해 고객사 세무 업무로 이동합니다.

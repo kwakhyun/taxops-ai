@@ -2,7 +2,9 @@
 
 ## 86초 실제 UI 시연
 
-[시연 영상 MP4](../artifacts/portfolio/taxops-ai-demo.mp4)는 로컬 앱을 Chromium에서 직접 조작해 녹화한 영상입니다. 합성 자료만 사용했으며 화면을 재구성한 목업이 아닙니다. 1440×1080, H.264 형식의 무음 영상으로 자막을 포함합니다.
+[README에서 바로 보기](../README.md#86초-시연-영상) | [원본 MP4 다운로드](https://github.com/kwakhyun/taxops-ai/raw/refs/heads/main/artifacts/portfolio/taxops-ai-demo.mp4)
+
+시연 영상은 로컬 앱을 Chromium에서 직접 조작해 녹화한 영상입니다. 합성 자료만 사용했으며 화면을 재구성한 목업이 아닙니다. 1440×1080, H.264 형식의 무음 영상으로 자막을 포함합니다.
 
 | 구간        | 확인할 내용                                                    |
 | ----------- | -------------------------------------------------------------- |
@@ -39,6 +41,8 @@ npm run demo:record
 macOS 기본 폰트 경로가 없는 환경에서는 `PORTFOLIO_FONT_PATH`에 한국어 TrueType 폰트의 절대 경로를 지정합니다. Linux에서는 예를 들어 설치된 NanumGothic TTF를 사용할 수 있습니다. 폰트 파일은 저장소에 포함하지 않습니다.
 
 브라우저 동작, 자막 시점과 상태 검증은 [녹화 시나리오](../tests/portfolio/role-demo.spec.ts)에 있습니다. [후처리 스크립트](../scripts/portfolio/build-demo-video.ts)는 검증에 성공한 실제 녹화만 합치고 자막을 붙입니다. 원본 WebM과 임시 자막은 Git에서 제외하고, MP4와 명세만 제출합니다.
+
+README의 재생 영상은 GitHub에 별도로 첨부한 파일입니다. 다시 녹화하면 MP4와 명세를 갱신하고, 새 영상을 GitHub 편집기의 파일 첨부 기능으로 올린 뒤 README의 첨부 URL도 교체해야 합니다. 로그인하지 않은 브라우저에서 재생되는지 확인하고, 저장소의 원본 MP4와 같은 영상인지 대조합니다.
 
 ## 설계 판단 한 페이지
 
