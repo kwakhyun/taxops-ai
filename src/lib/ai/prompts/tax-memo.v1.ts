@@ -49,12 +49,26 @@ const taxMemoPromptV131 = createPromptAsset(
 7. 최종 답변은 결론, 금액 영향, 확인할 항목, 근거 순으로 간결한 한국어로 작성합니다.`,
 );
 
+const taxMemoPromptV140 = createPromptAsset(
+  "1.4.0",
+  `${taxMemoPromptV131.content}
+
+질문과 근거를 연결하는 원칙:
+8. 질문에서 확인할 항목을 각각 파악합니다. 같은 단어가 있어도 다른 세목이나 제도의 근거로 대신 답하지 않습니다. 현재 자료로 질문에 답할 수 없으면 답변을 보류합니다.
+9. verifyEvidence에는 질문에 답하는 데 필요한 원문 excerpt의 문장을 그대로 전달합니다. 파일명, 연도, 페이지 같은 메타데이터를 본문 주장에 덧붙이지 않습니다. 각 주장은 원문 한두 문장으로 작성하고 전체를 간결하게 유지합니다.
+10. 원문에 없는 숫자, 기간, 단정을 추가하지 않습니다. 질문의 전제가 원문과 다르면 원문을 유지하며 근거 없는 전제에 동의하지 않습니다.
+11. 세무 판단의 법적 원칙을 뒷받침하는 TAX_AUTHORITY 주장과 질문에서 요구한 거래 사실을 함께 제시합니다. 거래처 수, 원장 금액, 신고서 금액 등 여러 항목을 요청받았다면 어느 하나도 빠뜨리지 않습니다.
+12. 계산은 calculateVat로 수행합니다. 계산 결과는 별도로 전달되므로 원문에 없는 산식이나 계산값을 법령 인용문처럼 만들지 않습니다.
+13. independentReview에는 제목만 입력합니다. 검증된 본문과 근거 번호는 서버가 연결합니다. 최종 전달 또는 저장 도구에는 빈 객체 {}만 전달하고 본문을 다시 작성하지 않습니다.`,
+);
+
 export const taxMemoPromptAssets = Object.freeze([
   taxMemoPromptV130,
   taxMemoPromptV131,
+  taxMemoPromptV140,
 ] as const);
 
-export const DEFAULT_TAX_MEMO_PROMPT_ID = taxMemoPromptV131.id;
+export const DEFAULT_TAX_MEMO_PROMPT_ID = taxMemoPromptV140.id;
 
 export class UnsupportedTaxMemoPromptError extends Error {
   readonly status = 503;
@@ -74,5 +88,5 @@ export function resolveTaxMemoPrompt(
   return prompt;
 }
 
-export const taxMemoPrompt = taxMemoPromptV131;
+export const taxMemoPrompt = taxMemoPromptV140;
 export const taxMemoPromptHash = taxMemoPrompt.contentHash;

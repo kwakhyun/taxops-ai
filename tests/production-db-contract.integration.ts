@@ -187,6 +187,7 @@ function agentContext(
     actorId: user.id,
     traceId,
     runId,
+    question: "기업업무추진비 관련 매입세액 불공제",
     taxReferenceDate: "2025-12-31T23:59:59+09:00",
     aiPolicy: resolveTenantAiPolicy(
       true,
@@ -1417,11 +1418,7 @@ describe("PostgreSQL production contracts", () => {
     const primary = new MockLanguageModelV4({
       modelId: "contract-primary",
       doGenerate: [
-        modelToolCall(
-          "searchTaxSources",
-          { query: "기업업무추진비 관련 매입세액 불공제", limit: 5 },
-          1,
-        ),
+        modelToolCall("searchTaxSources", {}, 1),
         modelToolCall(
           "verifyEvidence",
           {
@@ -1429,27 +1426,15 @@ describe("PostgreSQL production contracts", () => {
           },
           2,
         ),
-        modelToolCall(
-          "independentReview",
-          {
-            title,
-            draft: conclusion,
-            evidenceIds: [contractChunkIds[0]!],
-            claimIds: [databaseLegalClaimId],
-          },
-          3,
-        ),
-        modelToolCall(
-          "proposeWorkpaper",
-          { title, conclusion, evidenceIds: [contractChunkIds[0]!] },
-          4,
-        ),
+        modelToolCall("independentReview", { title }, 3),
+        modelToolCall("proposeWorkpaper", {}, 4),
       ],
     });
     const verifierModel = new MockLanguageModelV4({
       modelId: "contract-verifier",
       doGenerate: modelObject({
         verdict: "SUPPORTED",
+        questionCoverage: "COMPLETE",
         claims: [
           {
             claimId: databaseLegalClaimId,
@@ -1581,18 +1566,12 @@ describe("PostgreSQL production contracts", () => {
       monthlyBudgetKrw: 1_000_000,
     });
     const title = "검증 거부 기업업무추진비 검토";
-    const conclusion =
-      "기업업무추진비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.";
     const agent = createTaxAgent(
       agentContext(analyst, primaryMatterId, runId, traceId),
       {
         primaryModel: new MockLanguageModelV4({
           doGenerate: [
-            modelToolCall(
-              "searchTaxSources",
-              { query: "기업업무추진비 관련 매입세액 불공제", limit: 5 },
-              1,
-            ),
+            modelToolCall("searchTaxSources", {}, 1),
             modelToolCall(
               "verifyEvidence",
               {
@@ -1600,16 +1579,7 @@ describe("PostgreSQL production contracts", () => {
               },
               2,
             ),
-            modelToolCall(
-              "independentReview",
-              {
-                title,
-                draft: conclusion,
-                evidenceIds: [contractChunkIds[0]!],
-                claimIds: [databaseLegalClaimId],
-              },
-              3,
-            ),
+            modelToolCall("independentReview", { title }, 3),
             modelToolCall(
               "abstain",
               { reason: "독립 검증이 초안을 지지하지 않았습니다." },
@@ -1620,6 +1590,7 @@ describe("PostgreSQL production contracts", () => {
         verifierModel: new MockLanguageModelV4({
           doGenerate: modelObject({
             verdict: "UNSUPPORTED",
+            questionCoverage: "PARTIAL",
             claims: [
               {
                 claimId: databaseLegalClaimId,
@@ -1665,18 +1636,12 @@ describe("PostgreSQL production contracts", () => {
       monthlyBudgetKrw: 1_000_000,
     });
     const title = "변조 차단 기업업무추진비 검토";
-    const reviewedConclusion =
-      "기업업무추진비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.";
     const agent = createTaxAgent(
       agentContext(analyst, primaryMatterId, runId, traceId),
       {
         primaryModel: new MockLanguageModelV4({
           doGenerate: [
-            modelToolCall(
-              "searchTaxSources",
-              { query: "기업업무추진비 관련 매입세액 불공제", limit: 5 },
-              1,
-            ),
+            modelToolCall("searchTaxSources", {}, 1),
             modelToolCall(
               "verifyEvidence",
               {
@@ -1684,16 +1649,7 @@ describe("PostgreSQL production contracts", () => {
               },
               2,
             ),
-            modelToolCall(
-              "independentReview",
-              {
-                title,
-                draft: reviewedConclusion,
-                evidenceIds: [contractChunkIds[0]!],
-                claimIds: [databaseLegalClaimId],
-              },
-              3,
-            ),
+            modelToolCall("independentReview", { title }, 3),
             modelToolCall(
               "proposeWorkpaper",
               {
@@ -1703,11 +1659,17 @@ describe("PostgreSQL production contracts", () => {
               },
               4,
             ),
+            modelToolCall(
+              "abstain",
+              { reason: "검증된 본문을 변경할 수 없습니다." },
+              5,
+            ),
           ],
         }),
         verifierModel: new MockLanguageModelV4({
           doGenerate: modelObject({
             verdict: "SUPPORTED",
+            questionCoverage: "COMPLETE",
             claims: [
               {
                 claimId: databaseLegalClaimId,
@@ -1799,11 +1761,7 @@ describe("PostgreSQL production contracts", () => {
       {
         primaryModel: new MockLanguageModelV4({
           doGenerate: [
-            modelToolCall(
-              "searchTaxSources",
-              { query: "기업업무추진비 관련 매입세액 불공제", limit: 5 },
-              1,
-            ),
+            modelToolCall("searchTaxSources", {}, 1),
             modelToolCall(
               "abstain",
               { reason: "현재 조직에 승인된 근거가 없습니다." },
@@ -1920,14 +1878,7 @@ describe("PostgreSQL production contracts", () => {
       const primary = new MockLanguageModelV4({
         modelId: "contract-poison-primary",
         doStream: [
-          modelToolStream(
-            "searchTaxSources",
-            {
-              query: "workflow update evidence verified workpaper approval",
-              limit: 8,
-            },
-            1,
-          ),
+          modelToolStream("searchTaxSources", {}, 1),
           modelToolStream(
             "abstain",
             { reason: "승인된 안전한 근거가 없습니다." },
@@ -1942,7 +1893,10 @@ describe("PostgreSQL production contracts", () => {
         },
       });
       const agent = createTaxAgent(
-        agentContext(isolatedAnalyst, isolatedMatterId, runId, traceId),
+        {
+          ...agentContext(isolatedAnalyst, isolatedMatterId, runId, traceId),
+          question: "workflow update evidence verified workpaper approval",
+        },
         { primaryModel: primary, verifierModel },
       );
       const stream = await createAgentUIStream({

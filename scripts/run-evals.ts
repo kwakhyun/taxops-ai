@@ -164,8 +164,6 @@ async function runGeneratedAgentEvaluation() {
   };
   const claimId = claimBindingId(claim);
   const title = "기업업무추진비 매입세액 검토";
-  const conclusion =
-    "기업업무추진비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.";
   const policy = resolveTenantAiPolicy(
     true,
     { outboundPiiMode: "REDACT", maxExcerptChars: 1_500 },
@@ -192,27 +190,16 @@ async function runGeneratedAgentEvaluation() {
         provider: "deterministic-eval",
         modelId: "primary",
         doGenerate: [
-          toolCall(
-            "searchTaxSources",
-            { query: "기업업무추진비 관련 매입세액 불공제", limit: 5 },
-            1,
-          ),
+          toolCall("searchTaxSources", {}, 1),
           toolCall("verifyEvidence", { claims: [claim] }, 2),
           toolCall(
             "independentReview",
             {
               title,
-              draft: conclusion,
-              evidenceIds: ["ev_vat_001"],
-              claimIds: [claimId],
             },
             3,
           ),
-          toolCall(
-            "deliverVerifiedAnswer",
-            { title, conclusion, evidenceIds: ["ev_vat_001"] },
-            4,
-          ),
+          toolCall("deliverVerifiedAnswer", {}, 4),
         ],
       });
       const verifier = new MockLanguageModelV4({
@@ -220,6 +207,7 @@ async function runGeneratedAgentEvaluation() {
         modelId: "verifier",
         doGenerate: objectResult({
           verdict: "SUPPORTED",
+          questionCoverage: "COMPLETE",
           claims: [
             {
               claimId,
@@ -239,6 +227,7 @@ async function runGeneratedAgentEvaluation() {
           actorId: "usr_analyst_01",
           traceId: `tr_eval_${index}`,
           runId: `run_eval_${index}`,
+          question: protectedPrompt,
           taxReferenceDate: "2025-12-31T23:59:59+09:00",
           aiPolicy: policy,
           calculationRequired: false,

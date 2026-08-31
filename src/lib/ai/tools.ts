@@ -18,6 +18,8 @@ export interface TaxToolContext {
   actorId: string;
   traceId: string;
   runId: string;
+  /** Original question after the server's outbound-PII policy, never a model rewrite. */
+  question: string;
   taxReferenceDate: string;
   promptVersion: string;
   promptHash: string;
@@ -88,14 +90,21 @@ export function claimBindingId(input: {
     .slice(0, 20)}`;
 }
 
+export function renderVerifiedClaimBody(
+  verifiedClaims: TaxVerificationState["verifiedClaims"],
+) {
+  return [...verifiedClaims.values()]
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((claim) => claim.text.normalize("NFKC").replace(/\s+/g, " ").trim())
+    .join(" ");
+}
+
 export function renderVerifiedConclusion(
   verifiedClaims: TaxVerificationState["verifiedClaims"],
 ) {
-  const claims = [...verifiedClaims.values()]
-    .sort((left, right) => left.id.localeCompare(right.id))
-    .map((claim) => claim.text.normalize("NFKC").replace(/\s+/g, " ").trim());
-  if (!claims.length) return "";
-  return `${claims.join(" ")} 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.`;
+  const body = renderVerifiedClaimBody(verifiedClaims);
+  if (!body) return "";
+  return `${body} 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.`;
 }
 
 export function verificationArtifactHash(
@@ -105,7 +114,10 @@ export function verificationArtifactHash(
   calculations: unknown[],
   evidence: Map<string, Evidence>,
   verifiedClaims: TaxVerificationState["verifiedClaims"],
-  context: Pick<TaxToolContext, "taxReferenceDate" | "promptHash" | "aiPolicy">,
+  context: Pick<
+    TaxToolContext,
+    "question" | "taxReferenceDate" | "promptHash" | "aiPolicy"
+  >,
 ) {
   const evidenceBindings = [...new Set(evidenceIds)].sort().map((id) => {
     const item = evidence.get(id);
@@ -134,6 +146,9 @@ export function verificationArtifactHash(
           }))
           .sort((left, right) => left.id.localeCompare(right.id)),
         calculations,
+        questionHash: createHash("sha256")
+          .update(context.question)
+          .digest("hex"),
         taxReferenceDate: context.taxReferenceDate,
         promptHash: context.promptHash,
         retrieverVersion: RETRIEVER_VERSION,
@@ -143,7 +158,7 @@ export function verificationArtifactHash(
     .digest("hex");
 }
 
-class WorkflowGateError extends Error {
+export class WorkflowGateError extends Error {
   readonly status = 409;
   readonly code = "AI_WORKFLOW_GATE_FAILED";
 }
@@ -164,8 +179,9 @@ export function createTaxTools(
         query: z.string().min(3).max(500),
         limit: z.number().int().min(1).max(8).default(5),
       }),
-      execute: async ({ query, limit }) => {
+      execute: async ({ limit }) => {
         const startedAt = Date.now();
+        const query = context.question;
         state.searchAttempted = true;
         const evidence = await retrieveEvidenceForContext({
           tenantId: context.tenantId,
@@ -276,7 +292,9 @@ export function createTaxTools(
       execute: async ({ claims }) => {
         const startedAt = Date.now();
         state.integrityAttempted = true;
-        const verificationQuery = claims.map((claim) => claim.text).join(" ");
+        // Recheck current approval/version status without letting generated
+        // claims broaden the original question's retrieval scope.
+        const verificationQuery = context.question;
         const scopedEvidence = await retrieveEvidenceForContext({
           tenantId: context.tenantId,
           matterId: context.matterId,
@@ -372,13 +390,16 @@ export function createTaxTools(
         const conclusionIsBound =
           conclusion === renderVerifiedConclusion(state.verifiedClaims);
         if (
+          !context.requestWorkpaper ||
           !state.integrityVerified ||
           !state.independentlyVerified ||
           !evidenceWasVerified ||
           !hasTaxAuthority(evidenceIds) ||
           !exactArtifactWasVerified ||
           !conclusionIsBound ||
-          state.proposed
+          state.proposed ||
+          state.delivered ||
+          state.abstained
         ) {
           throw new WorkflowGateError(
             "검토조서 저장 전 근거 무결성 검사와 별도 검증 에이전트의 검토가 필요합니다.",
@@ -502,7 +523,10 @@ export function createTaxTools(
           !evidenceWasVerified ||
           !hasTaxAuthority(evidenceIds) ||
           !exactArtifactWasVerified ||
-          !conclusionIsBound
+          !conclusionIsBound ||
+          state.proposed ||
+          state.delivered ||
+          state.abstained
         ) {
           throw new WorkflowGateError(
             "검증한 내용과 동일한 답변만 전달할 수 있습니다.",

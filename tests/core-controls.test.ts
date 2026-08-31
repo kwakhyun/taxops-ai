@@ -87,7 +87,7 @@ describe("프롬프트 자산 구성", () => {
   it("기본 프롬프트의 버전과 해시를 불변 자산으로 유지한다", () => {
     const prompt = resolveTaxMemoPrompt();
     expect(prompt.id).toBe(DEFAULT_TAX_MEMO_PROMPT_ID);
-    expect(prompt.id).toBe("tax-memo.v1.3.1");
+    expect(prompt.id).toBe("tax-memo.v1.4.0");
     expect(prompt.contentHash).toBe(
       createHash("sha256").update(prompt.content).digest("hex"),
     );
@@ -102,7 +102,7 @@ describe("프롬프트 자산 구성", () => {
       "eef395686d730a3148f8d16250d7dca901420aa9dfb9d4af7671c671d592c323",
     );
     expect(previous.contentHash).not.toBe(current.contentHash);
-    expect(taxMemoPromptAssets).toHaveLength(2);
+    expect(taxMemoPromptAssets).toHaveLength(3);
   });
 
   it("등록되지 않은 프롬프트 버전은 운영 실행 전에 거부한다", () => {

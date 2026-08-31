@@ -1,5 +1,5 @@
 import type { UIMessage } from "ai";
-import type { createTaxTools } from "@/lib/ai/tools";
+import type { createTaxAgent } from "@/lib/ai/agents/tax-agent";
 import type { InferUITools } from "ai";
 
 export interface TaxMessageMetadata {
@@ -42,5 +42,5 @@ export type TaxDataParts = {
 export type TaxAssistantMessage = UIMessage<
   TaxMessageMetadata,
   TaxDataParts,
-  InferUITools<ReturnType<typeof createTaxTools>>
+  InferUITools<ReturnType<typeof createTaxAgent>["tools"]>
 >;

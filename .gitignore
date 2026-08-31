@@ -21,3 +21,10 @@ artifacts/*
 !artifacts/evaluation-report.json
 !artifacts/dashboard-visual.png
 !artifacts/assistant-visual.png
+!artifacts/portfolio/
+artifacts/portfolio/*
+!artifacts/portfolio/taxops-ai-demo.mp4
+!artifacts/portfolio/demo-manifest.json
+!artifacts/portfolio/live-evaluation-report.json
+!artifacts/portfolio/live-release-report.json
+tmp/

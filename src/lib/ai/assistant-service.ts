@@ -152,6 +152,7 @@ export async function handleAssistantRequest(request: Request) {
         traceId,
         aiPolicy,
         runId,
+        question,
         taxReferenceDate,
         calculationRequired: requiresTaxCalculation(question),
         requestWorkpaper:

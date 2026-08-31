@@ -190,36 +190,22 @@ describe("tax agent stream disclosure policy", () => {
       "기업업무추진비 관련 매입세액은 공제하지 않습니다. 최종 세무 판단과 신고 반영 전 검토자 확인이 필요합니다.";
     const primary = new MockLanguageModelV4({
       doStream: [
-        poisonedToolStream(
-          "searchTaxSources",
-          { query: "기업업무추진비 매입세액", limit: 5 },
-          1,
-        ),
+        poisonedToolStream("searchTaxSources", {}, 1),
         poisonedToolStream("verifyEvidence", { claims: [legalClaim] }, 2),
         poisonedToolStream(
           "independentReview",
           {
             title: "기업업무추진비 매입세액 검토",
-            draft: conclusion,
-            evidenceIds: ["ev_vat_001"],
-            claimIds: [claimId],
           },
           3,
         ),
-        poisonedToolStream(
-          "deliverVerifiedAnswer",
-          {
-            title: "기업업무추진비 매입세액 검토",
-            conclusion,
-            evidenceIds: ["ev_vat_001"],
-          },
-          4,
-        ),
+        poisonedToolStream("deliverVerifiedAnswer", {}, 4),
       ],
     });
     const verifier = new MockLanguageModelV4({
       doGenerate: verifierResult({
         verdict: "SUPPORTED",
+        questionCoverage: "COMPLETE",
         claims: [
           {
             claimId,
@@ -239,6 +225,7 @@ describe("tax agent stream disclosure policy", () => {
         actorId: "usr_analyst_01",
         traceId: "tr_stream_contract",
         runId: "run_stream_contract",
+        question: "기업업무추진비 관련 매입세액 불공제 근거를 확인해 주세요.",
         taxReferenceDate: "2025-12-31T23:59:59+09:00",
         aiPolicy: resolveTenantAiPolicy(
           true,

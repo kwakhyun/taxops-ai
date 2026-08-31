@@ -28,6 +28,8 @@
     "worker": "node --import tsx src/worker/index.ts",
     "reviewer": "node --import tsx src/reviewer/index.ts",
     "eval": "node --conditions=react-server --import tsx scripts/run-evals.ts",
+    "eval:live": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/run-live-evals.ts",
+    "demo:record": "playwright test --config playwright.portfolio.config.ts && node --import tsx scripts/portfolio/build-demo-video.ts",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run typecheck:worker && npm run typecheck:reviewer && npm run test:coverage && npm run eval && npm run build"
   },
   "engines": {
@@ -51,6 +53,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@ai-sdk/openai": "^4.0.52",
     "@axe-core/playwright": "^4.13.0",
     "@modelcontextprotocol/client": "^2.0.0",
     "@playwright/test": "^1.62.1",
