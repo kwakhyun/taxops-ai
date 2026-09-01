@@ -3817,7 +3817,7 @@ button {
   white-space: nowrap;
 }
 
-/* EY-inspired enterprise theme: charcoal frames the work, yellow marks action. */
+/* Enterprise theme: charcoal frames the work, yellow marks action. */
 :where(a, button, input, textarea, select):focus-visible {
   outline: 3px solid var(--brand-yellow);
   outline-offset: 2px;
