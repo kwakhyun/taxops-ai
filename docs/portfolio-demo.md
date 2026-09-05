@@ -1,5 +1,7 @@
 # 역할별 시연과 제출 자료
 
+제출된 PDF와 영상 원본은 보존합니다. 영상은 2026-08-31 녹화 기준이며, 9월 5일 개선한 현재 UI와 화면 구성 및 상태 표시가 일부 다릅니다. [버전별 차이와 고정 링크](portfolio-consistency.md)에서 대조할 수 있습니다.
+
 ## 86초 실제 UI 시연
 
 [README에서 바로 보기](../README.md#86초-시연-영상) | [원본 MP4 다운로드](https://github.com/kwakhyun/taxops-ai/raw/refs/heads/main/artifacts/portfolio/taxops-ai-demo.mp4)
@@ -26,7 +28,9 @@
 - 승인 상태는 같은 데모 서버 안에서 유지됩니다. 서버 재시작 후 영구 보존 여부는 이 영상의 검증 범위가 아닙니다.
 - 모바일은 Chromium의 반응형 화면입니다. 실제 iOS·Android 기기나 가상 키보드 검수를 대체하지 않습니다.
 
-### 다시 녹화하기
+### 향후 별도 버전 녹화하기
+
+아래 명령은 기존 산출물을 덮어쓰므로 제출 자료를 보존한 별도 작업 디렉터리에서 실행합니다. 새 영상은 별도 버전으로 관리하며, 이번 개선에서는 녹화나 제출 원본 교체를 수행하지 않았습니다.
 
 Node.js 22 이상, Playwright Chromium, `ffmpeg`, `ffprobe`와 한국어 TrueType 폰트가 필요합니다. 영상 처리는 CPU 스레드를 2개로 제한합니다.
 

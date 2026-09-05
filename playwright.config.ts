@@ -37,7 +37,7 @@ export default defineConfig({
       E2E_RESET_ENABLED: "true",
       E2E_FIXED_NOW: "2026-08-30T09:00:00+09:00",
     },
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "true",
     timeout: 120_000,
   },
   projects: [

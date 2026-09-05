@@ -212,3 +212,22 @@ export async function searchEvidence(
 ) {
   return production.searchEvidence(input);
 }
+
+export async function queryMatters(
+  user: SessionUser,
+  query: import("@/lib/contracts/listing").MatterQuery,
+) {
+  return adapter().queryMatters(user, query);
+}
+export async function searchMatters(
+  user: SessionUser,
+  query: import("@/lib/contracts/listing").MatterQuery,
+) {
+  return adapter().searchMatters(user, query);
+}
+export async function queryAuditEvents(
+  user: SessionUser,
+  query: import("@/lib/contracts/listing").AuditQuery,
+) {
+  return adapter().queryAuditEvents(user, query);
+}

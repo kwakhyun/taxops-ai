@@ -6,7 +6,7 @@ export type AssistantEvidence = {
   documentName: string;
   location: string;
   excerpt: string;
-  score: number;
+  score?: number;
   contentHash: string;
 };
 
@@ -128,9 +128,24 @@ export function streamedAssistantEvidence(message?: TaxAssistantMessage) {
               {
                 id: item.id,
                 documentName: item.documentName,
-                location: String(item.location ?? "문서 본문"),
+                location:
+                  typeof item.location === "string"
+                    ? item.location
+                    : [
+                        typeof item.page === "number" && item.page > 0
+                          ? `${item.page}쪽`
+                          : undefined,
+                        typeof item.section === "string"
+                          ? item.section
+                          : undefined,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "문서 본문",
                 excerpt: item.excerpt,
-                score: Number(item.score ?? 0),
+                score:
+                  typeof item.score === "number" && Number.isFinite(item.score)
+                    ? item.score
+                    : undefined,
                 contentHash: String(item.contentHash ?? item.id),
               },
             ]

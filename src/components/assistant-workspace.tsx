@@ -415,7 +415,11 @@ export function AssistantWorkspace({
                   <strong>{item.documentName}</strong>
                   <small>{item.location}</small>
                 </div>
-                <em>{Math.round(item.score * 100)}%</em>
+                {item.score !== undefined ? (
+                  <em aria-label="검색 관련도">
+                    {Math.round(item.score * 100)}%
+                  </em>
+                ) : null}
               </div>
               <p>{item.excerpt}</p>
               <code>

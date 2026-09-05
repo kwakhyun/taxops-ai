@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { EngagementJourney } from "@/components/engagement-journey";
 import { StatusPill } from "@/components/status-pill";
+import { can } from "@/lib/auth/rbac";
+import { filingChecks } from "@/lib/ui/filing";
 import { getSessionUser } from "@/lib/auth/session";
 import { workflowSteps } from "@/lib/domain/fixtures";
 import { formatMilliseconds, formatWon } from "@/lib/format";
@@ -70,39 +72,11 @@ export default async function CaseDetailPage({ params }: Props) {
     .replaceAll(/[^a-zA-Z0-9]/g, "")
     .slice(0, 8)
     .toLocaleUpperCase()}`;
-  const filingChecklist = [
-    {
-      label: "필수 자료 수집",
-      helper: matterDocuments.length
-        ? `${matterDocuments.length}건 연결됨`
-        : "자료 등록 필요",
-      complete: matterDocuments.length > 0,
-    },
-    {
-      label: "근거 기반 분석",
-      helper: latestRun
-        ? `근거 충족률 ${latestRun.evidenceCoverage}%`
-        : "분석 실행 필요",
-      complete: Boolean(latestRun),
-    },
-    {
-      label: "전문가 검토·승인",
-      helper:
-        workpaper?.reviewStatus === "APPROVED"
-          ? "승인 완료"
-          : workpaper
-            ? "검토 대기"
-            : "검토조서 필요",
-      complete: workpaper?.reviewStatus === "APPROVED",
-    },
-    {
-      label: "실행 이력·감사 추적",
-      helper: latestRun?.traceId
-        ? `추적 ID ${latestRun.traceId}`
-        : "실행 이력 대기",
-      complete: Boolean(latestRun?.traceId),
-    },
-  ];
+  const filingChecklist = filingChecks(matterDocuments, analysis);
+  const canReview = can(user, "workpaper:review");
+  const reviewHref = canReview
+    ? `/reviews?matter=${encodeURIComponent(matter.id)}`
+    : "#review-status";
   const completedFilingChecks = filingChecklist.filter(
     (item) => item.complete,
   ).length;
@@ -152,7 +126,9 @@ export default async function CaseDetailPage({ params }: Props) {
             </summary>
             <div className="case-actions-popover">
               <Link href={documentsHref}>업무 자료 보기</Link>
-              <Link href="/audit">감사 로그 보기</Link>
+              {can(user, "audit:read") ? (
+                <Link href="/audit">감사 로그 보기</Link>
+              ) : null}
             </div>
           </details>
           <Link className="button button-secondary" href={documentsHref}>
@@ -164,7 +140,7 @@ export default async function CaseDetailPage({ params }: Props) {
         </div>
       </section>
 
-      <EngagementJourney matter={matter} />
+      <EngagementJourney matter={matter} canReview={canReview} />
 
       <nav className="tabs case-tabs" aria-label="세무 업무 세부 메뉴">
         <Link className="tab tab-active" href={`/cases/${matter.id}`}>
@@ -179,7 +155,7 @@ export default async function CaseDetailPage({ params }: Props) {
         <Link className="tab" href={`${assistantHref}#analysis-workspace`}>
           계산 및 초안
         </Link>
-        <Link className="tab" href="/reviews">
+        <Link className="tab" href={reviewHref}>
           검토 및 승인
         </Link>
         <Link className="tab" href="#filing">
@@ -394,11 +370,12 @@ export default async function CaseDetailPage({ params }: Props) {
             </div>
             <div className="filing-readiness-footer">
               <span>
-                AI 초안은 전문가 승인 후에만 신고 자료로 확정할 수 있습니다.
+                등록 자료의 처리 상태입니다. 세목별 필수 서류 충족 여부는
+                담당자가 별도로 확인해야 합니다.
               </span>
               <Link
                 className="button button-primary button-compact"
-                href="/reviews"
+                href={reviewHref}
               >
                 검토 및 승인 확인 <ArrowRight size={14} />
               </Link>
@@ -496,12 +473,22 @@ export default async function CaseDetailPage({ params }: Props) {
             </article>
           ) : null}
 
-          <article className="card reviewer-card">
+          <article className="card reviewer-card" id="review-status">
             <span className="reviewer-avatar">
               {matter.reviewer.slice(0, 1)}
             </span>
             <div>
               <span className="card-kicker">담당 검토자</span>
+              <p>
+                최신 분석 검토 상태:{" "}
+                {workpaper?.reviewStatus === "APPROVED"
+                  ? "승인 완료"
+                  : workpaper?.reviewStatus === "REJECTED"
+                    ? "반려"
+                    : workpaper
+                      ? "검토 대기"
+                      : "검토조서 없음"}
+              </p>
               <strong>{matter.reviewer}</strong>
               <p>
                 {hasAnalysis
@@ -511,9 +498,10 @@ export default async function CaseDetailPage({ params }: Props) {
             </div>
             <Link
               className="button button-secondary button-compact"
-              href="/reviews"
+              href={reviewHref}
             >
-              <MessageSquareText size={14} /> 검토 요청 보기
+              <MessageSquareText size={14} />{" "}
+              {canReview ? "검토 요청 보기" : "검토 상태 확인"}
             </Link>
           </article>
         </aside>

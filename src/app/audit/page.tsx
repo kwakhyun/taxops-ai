@@ -1,3 +1,4 @@
+import { auditQuerySchema } from "@/lib/contracts/listing";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Fingerprint, Link2 } from "lucide-react";
@@ -5,7 +6,7 @@ import { AuditTable } from "@/components/audit-table";
 import { PageHeading } from "@/components/page-heading";
 import { can } from "@/lib/auth/rbac";
 import { getSessionUser } from "@/lib/auth/session";
-import { getAuditIntegrity, listAuditEvents } from "@/lib/repository";
+import { getAuditIntegrity, queryAuditEvents } from "@/lib/repository";
 
 export const metadata: Metadata = { title: "감사 로그" };
 
@@ -13,7 +14,7 @@ export default async function AuditPage() {
   const user = await getSessionUser();
   if (!can(user, "audit:read")) notFound();
   const [auditEvents, integrity] = await Promise.all([
-    listAuditEvents(user),
+    queryAuditEvents(user, auditQuerySchema.parse({})),
     getAuditIntegrity(user),
   ]);
   return (
@@ -62,7 +63,7 @@ export default async function AuditPage() {
         </article>
       </section>
 
-      <AuditTable events={auditEvents} />
+      <AuditTable initial={auditEvents} />
     </>
   );
 }

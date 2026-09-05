@@ -4,6 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { AuthenticationError, getSessionUser } from "@/lib/auth/session";
 import { getPermissions } from "@/lib/auth/rbac";
 import { isPortfolioDemo } from "@/lib/runtime/portfolio-demo";
+import "./styles/tokens.css";
+import "./styles/primitives.css";
 import "./globals.css";
 import "./workspace.css";
 

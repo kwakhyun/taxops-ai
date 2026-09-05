@@ -1,16 +1,14 @@
 "use client";
 
 import { CheckCircle2, Download, Search, ShieldCheck } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { TableViewport } from "@/components/table-viewport";
+import { usePagedQuery } from "@/components/use-paged-query";
+import { Pagination } from "@/components/pagination";
+import type { PageResult } from "@/lib/contracts/listing";
 import type { AuditEvent } from "@/lib/domain/types";
 import { auditActionLabel, auditOutcomeLabel } from "@/lib/ui/labels";
-import {
-  auditIpLabel,
-  buildAuditCsv,
-  filterAuditEvents,
-  formatAuditTime,
-} from "@/lib/ui/audit";
+import { auditIpLabel, formatAuditTime } from "@/lib/ui/audit";
 
 const filters = [
   { value: "ALL", label: "전체" },
@@ -19,22 +17,47 @@ const filters = [
   { value: "FAILED", label: "실패" },
 ] as const;
 
-export function AuditTable({ events }: { events: AuditEvent[] }) {
+export function AuditTable({ initial }: { initial: PageResult<AuditEvent> }) {
   const [query, setQuery] = useState("");
   const [outcome, setOutcome] = useState<AuditEvent["outcome"] | "ALL">("ALL");
-  const filtered = useMemo(
-    () => filterAuditEvents(events, query, outcome),
-    [events, query, outcome],
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [page, setPage] = useState(1);
+  const [exportError, setExportError] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const params = new URLSearchParams({ q: query, outcome, page: String(page) });
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const { result, loading, error, reload } = usePagedQuery(
+    "/api/v1/audit",
+    params.toString(),
+    initial,
+    "q=&outcome=ALL&page=1",
   );
-  function download() {
-    const url = URL.createObjectURL(
-      new Blob([buildAuditCsv(filtered)], { type: "text/csv;charset=utf-8" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "taxops-audit.csv";
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+  const filtered = loading ? [] : result.items;
+  async function download() {
+    if (exporting) return;
+    setExporting(true);
+    setExportError("");
+    try {
+      const response = await fetch(`/api/v1/audit?${params}&format=csv`, {
+        signal: AbortSignal.timeout(30000),
+      });
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.error?.message ?? "내보내기 실패");
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "taxops-audit.csv";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (cause) {
+      setExportError(cause instanceof Error ? cause.message : "내보내기 실패");
+    } finally {
+      setExporting(false);
+    }
   }
   return (
     <section className="card audit-table-card">
@@ -44,7 +67,11 @@ export function AuditTable({ events }: { events: AuditEvent[] }) {
           <span className="sr-only">감사 로그 검색</span>
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            maxLength={200}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
             placeholder="행위자, 작업, 대상, 추적 ID 검색"
           />
         </label>
@@ -55,25 +82,68 @@ export function AuditTable({ events }: { events: AuditEvent[] }) {
               type="button"
               className={`filter-chip ${outcome === filter.value ? "filter-chip-active" : ""}`}
               aria-pressed={outcome === filter.value}
-              onClick={() => setOutcome(filter.value)}
+              onClick={() => {
+                setOutcome(filter.value);
+                setPage(1);
+              }}
             >
               {filter.label}
             </button>
           ))}
         </div>
         <span className="result-count" role="status">
-          감사 기록 {filtered.length}건
+          {loading ? "조회 중" : `감사 기록 ${result.total}건`}
         </span>
         <button
           className="button button-secondary button-compact"
           type="button"
           onClick={download}
-          disabled={!filtered.length}
+          disabled={loading || exporting || !result.total || Boolean(error)}
         >
-          <Download size={15} aria-hidden="true" /> 검색 결과 내보내기
+          <Download size={15} aria-hidden="true" />{" "}
+          {exporting ? "내보내는 중" : "검색 결과 내보내기"}
         </button>
       </div>
-      {filtered.length ? (
+      <div className="listing-date-filters">
+        <label>
+          시작일
+          <input
+            type="date"
+            value={from}
+            max={to || undefined}
+            onChange={(event) => {
+              setFrom(event.target.value);
+              setPage(1);
+            }}
+          />
+        </label>
+        <label>
+          종료일
+          <input
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={(event) => {
+              setTo(event.target.value);
+              setPage(1);
+            }}
+          />
+        </label>
+        <span>한국 시간 기준 · 내보내기는 검색 결과 전체, 최대 10,000건</span>
+      </div>
+      {exportError ? <p role="alert">{exportError}</p> : null}
+      {loading ? (
+        <p className="listing-state" role="status">
+          감사 기록을 조회하고 있습니다.
+        </p>
+      ) : error ? (
+        <p className="listing-state" role="alert">
+          {error}{" "}
+          <button type="button" onClick={reload}>
+            다시 시도
+          </button>
+        </p>
+      ) : filtered.length ? (
         <TableViewport label="감사 기록 목록">
           <table className="data-table audit-table responsive-table">
             <thead>
@@ -145,6 +215,9 @@ export function AuditTable({ events }: { events: AuditEvent[] }) {
               onClick={() => {
                 setQuery("");
                 setOutcome("ALL");
+                setFrom("");
+                setTo("");
+                setPage(1);
               }}
             >
               검색 초기화
@@ -152,6 +225,13 @@ export function AuditTable({ events }: { events: AuditEvent[] }) {
           </div>
         </div>
       )}
+      <Pagination
+        page={page}
+        pageSize={result.pageSize}
+        total={result.total}
+        disabled={loading}
+        onPageChange={setPage}
+      />
       <div className="audit-footer">
         <ShieldCheck size={14} aria-hidden="true" />
         <span>

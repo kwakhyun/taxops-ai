@@ -8,7 +8,10 @@ const nextConfig: NextConfig = {
       : ".next",
   ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
   devIndicators: false,
-  allowedDevOrigins: ["127.0.0.1"],
+  allowedDevOrigins: [
+    "127.0.0.1",
+    ...(process.env.E2E_RESET_ENABLED === "true" ? ["host.lima.internal"] : []),
+  ],
   poweredByHeader: false,
   reactStrictMode: true,
   experimental: {

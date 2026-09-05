@@ -53,7 +53,7 @@ test.describe("TaxOps AI critical user journeys", () => {
     await page.keyboard.press("Escape");
     await expect(
       page.getByRole("button", {
-        name: /세무 업무, 자료, 고객사 검색/,
+        name: /고객사, 세목, 화면 검색/,
       }),
     ).toBeFocused();
     await page.keyboard.press("Control+K");
@@ -65,7 +65,7 @@ test.describe("TaxOps AI critical user journeys", () => {
     await page.getByRole("button", { name: "추가 작업 열기" }).click();
     await expect(
       page.getByRole("link", { name: "감사 로그 보기" }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     const downloadStarted = page.waitForEvent("download");
     await page
       .getByRole("link", { name: "2025_2기_매입매출장.xlsx 다운로드" })

@@ -1,0 +1,111 @@
+/* Shared buttons and card primitives. Screen-specific styles belong to their component. */
+
+.button {
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease;
+  min-height: 42px;
+  border-radius: var(--radius-sm);
+  padding: 0 16px;
+  font-size: var(--font-size-md);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+.button-secondary {
+  border-color: var(--ink-200);
+  background: white;
+  color: var(--ink-800);
+  border-radius: var(--radius-sm);
+}
+
+.button-secondary:hover {
+  border-color: var(--ink-300);
+  background: var(--ink-50);
+}
+
+.button-danger {
+  border-color: #efc7c4;
+  background: var(--red-50);
+  color: var(--red-700);
+}
+
+.button-ghost {
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  padding: 0 8px;
+  color: var(--ink-800);
+}
+
+.card {
+  min-width: 0;
+  border: 1px solid var(--ink-150);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  border-color: var(--ink-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 17px;
+}
+
+.card-header h2,
+.card-header h3 {
+  margin: 0;
+  color: var(--ink-900);
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  font-size: var(--font-size-lg);
+}
+
+.card-header p {
+  margin: 3px 0 0;
+  color: var(--ink-500);
+  font-size: var(--font-size-xs);
+  margin-top: 5px;
+}
+
+.button-compact {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: var(--font-size-sm);
+}
+
+.button-primary {
+  border-color: var(--brand-yellow-deep);
+  background: var(--brand-yellow);
+  box-shadow: none;
+  color: var(--ink-950);
+}
+
+.button-primary:hover {
+  border-color: var(--brand-yellow-deep);
+  background: #f4dc00;
+  box-shadow: 0 5px 16px rgb(24 24 32 / 12%);
+}
+
+.card-body {
+  padding: 0 24px 24px;
+}

@@ -1,69 +1,49 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   BriefcaseBusiness,
-  CheckCircle2,
-  CircleAlert,
   FileCheck2,
   FileSearch,
   Plus,
   ShieldCheck,
-  Sparkles,
-  TimerReset,
+  CircleAlert,
 } from "lucide-react";
 import { DashboardControlRoom } from "@/components/dashboard-control-room";
-import { EngagementJourney } from "@/components/engagement-journey";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
-import { StatusPill } from "@/components/status-pill";
 import { getSessionUser } from "@/lib/auth/session";
 import { listMatters } from "@/lib/repository";
 
 export const dynamic = "force-dynamic";
 
-const riskOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;
-
 export default async function DashboardPage() {
   const user = await getSessionUser();
   const matters = await listMatters(user);
   const active = matters.filter((matter) => matter.status !== "CLOSED");
-  const priority = matters
-    .toSorted((left, right) => riskOrder[left.risk] - riskOrder[right.risk])
-    .slice(0, 4);
-  const reviewCount = matters.filter(
-    (matter) => matter.status === "IN_REVIEW",
-  ).length;
-  const findings = active.reduce(
-    (total, matter) => total + matter.openFindings,
-    0,
-  );
   const coverage = active.length
     ? Math.round(
         active.reduce((total, matter) => total + matter.evidenceCoverage, 0) /
           active.length,
       )
     : 0;
-  const progress = active.length
-    ? Math.round(
-        active.reduce((total, matter) => total + matter.progress, 0) /
-          active.length,
-      )
-    : 0;
-  const focus = priority[0];
-  const dashboardNow = process.env.E2E_FIXED_NOW
+  const now = process.env.E2E_FIXED_NOW
     ? new Date(process.env.E2E_FIXED_NOW)
     : new Date();
   const today = new Intl.DateTimeFormat("ko-KR", {
     dateStyle: "full",
     timeZone: "Asia/Seoul",
-  }).format(dashboardNow);
-
+  }).format(now);
+  const dateKey = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Seoul",
+  }).format(now);
   return (
     <>
       <PageHeading
         eyebrow={today}
         title="오늘 처리할 세무 업무"
-        description={`${user.name}님, 마감과 검토 대기 항목부터 확인하세요. AI 결과는 근거와 승인 상태를 함께 관리합니다.`}
+        description={`${user.name}님, 필요한 조치와 마감 일정을 확인하세요.`}
         actions={
           <>
             <Link className="button button-secondary" href="/documents">
@@ -75,218 +55,41 @@ export default async function DashboardPage() {
           </>
         }
       />
-
       <section className="metric-grid" aria-label="핵심 업무 지표">
         <MetricCard
           label="진행 중인 업무"
           value={String(active.length)}
-          helper={"전체 " + matters.length + "건"}
+          helper={`전체 ${matters.length}건`}
           icon={BriefcaseBusiness}
           tone="ink"
-          footer={
-            <div
-              className="progress-track"
-              role="progressbar"
-              aria-label="진행 중인 세무 업무의 평균 진행률"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={progress}
-            >
-              <div className="progress-bar" style={{ width: progress + "%" }} />
-            </div>
-          }
         />
         <MetricCard
           label="검토 중"
-          value={String(reviewCount)}
+          value={String(
+            active.filter((matter) => matter.status === "IN_REVIEW").length,
+          )}
           helper="현재 업무 상태 기준"
           icon={FileCheck2}
           tone="amber"
         />
         <MetricCard
-          label="평균 근거 충족률"
-          value={active.length ? coverage + "%" : "—"}
-          helper="진행 중인 업무 기준"
+          label="평균 근거 사용 승인율"
+          value={active.length ? `${coverage}%` : "—"}
+          helper="업무별 등록 자료 승인율의 평균"
           icon={ShieldCheck}
           tone="green"
         />
         <MetricCard
-          label="미해결 쟁점"
-          value={String(findings)}
-          helper="진행 중인 업무 합계"
-          icon={TimerReset}
+          label="고위험 업무"
+          value={String(
+            active.filter((matter) => matter.risk === "HIGH").length,
+          )}
+          helper="진행 중인 업무 기준"
+          icon={CircleAlert}
           tone="violet"
         />
       </section>
-
-      <DashboardControlRoom matters={matters} />
-
-      <section className="dashboard-grid">
-        <article className="card">
-          <div className="card-header">
-            <div>
-              <h2>우선 처리 업무</h2>
-              <p>현재 조직의 세무 리스크가 높은 순서로 정렬했습니다.</p>
-            </div>
-            <Link className="section-link" href="/cases">
-              전체 보기 <ArrowRight size={13} />
-            </Link>
-          </div>
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>고객사 · 세목</th>
-                  <th>상태</th>
-                  <th>리스크</th>
-                  <th>진행률</th>
-                  <th>마감</th>
-                </tr>
-              </thead>
-              <tbody>
-                {priority.map((matter) => (
-                  <tr key={matter.id}>
-                    <td data-label="고객사·세목">
-                      <Link
-                        className="table-primary"
-                        href={"/cases/" + matter.id}
-                      >
-                        <strong>{matter.client}</strong>
-                        <span>
-                          {matter.taxType} · {matter.period}
-                        </span>
-                      </Link>
-                    </td>
-                    <td data-label="상태">
-                      <StatusPill status={matter.status} />
-                    </td>
-                    <td data-label="리스크">
-                      <StatusPill status={matter.risk} />
-                    </td>
-                    <td data-label="진행률">
-                      <div className="table-progress">
-                        <div
-                          className="progress-track"
-                          role="progressbar"
-                          aria-label={`${matter.client} 업무 진행률`}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-valuenow={matter.progress}
-                        >
-                          <div
-                            className="progress-bar"
-                            style={{ width: matter.progress + "%" }}
-                          />
-                        </div>
-                        <span>{matter.progress}%</span>
-                      </div>
-                    </td>
-                    <td data-label="마감">{matter.dueDate}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!priority.length ? (
-              <div className="empty-state">등록된 세무 업무가 없습니다.</div>
-            ) : null}
-          </div>
-        </article>
-
-        <article className="card">
-          <div className="card-header">
-            <div>
-              <h2>검토 담당 현황</h2>
-              <p>업무별 검토자와 미해결 쟁점을 확인합니다.</p>
-            </div>
-            <span className="status-pill status-info">{priority.length}건</span>
-          </div>
-          <div className="card-body today-list">
-            {priority.map((matter) => (
-              <div className="today-item" key={matter.id}>
-                <span className="today-time">{matter.dueDate}</span>
-                <div className="today-copy">
-                  <strong>{matter.client}</strong>
-                  <span>
-                    검토자 {matter.reviewer} · 미해결 {matter.openFindings}건
-                  </span>
-                </div>
-                <span
-                  className={
-                    "today-marker " +
-                    (matter.risk === "HIGH"
-                      ? "today-marker-danger"
-                      : matter.risk === "MEDIUM"
-                        ? "today-marker-warning"
-                        : "")
-                  }
-                />
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
-
-      {focus ? <EngagementJourney matter={focus} compact /> : null}
-
-      <section className="ai-insight-card" aria-labelledby="ai-insight-title">
-        <div className="ai-insight-header">
-          <Sparkles size={14} /> 근거 기반 AI 분석
-        </div>
-        <h2 className="ai-insight-title" id="ai-insight-title">
-          {focus
-            ? focus.client + " 업무의 근거 기반 분석을 시작할 수 있습니다."
-            : "첫 세무 업무를 등록하고 근거 기반 분석을 시작하세요."}
-        </h2>
-        <p className="ai-insight-copy">
-          문서를 검색한 뒤 인용 가능한 근거와 계산 결과를 분리해 제시합니다. AI
-          초안은 세무 검토자가 승인하기 전까지 확정된 결론으로 취급되지
-          않습니다.
-        </p>
-        <div className="ai-insight-footer">
-          <div className="source-stack" aria-label="AI 안전 통제">
-            <span className="source-chip">검</span>
-            <span className="source-chip">승</span>
-            <span className="source-label">근거 검증 · 전문가 승인</span>
-          </div>
-          <Link
-            className="button button-primary button-compact"
-            href={focus ? "/assistant?matter=" + focus.id : "/cases/new"}
-          >
-            {focus ? "분석 시작" : "업무 등록"} <ArrowRight size={14} />
-          </Link>
-        </div>
-      </section>
-
-      <section className="mini-grid" aria-label="현재 업무 요약">
-        {[
-          [matters.length + "건", "현재 조직의 전체 세무 업무"],
-          [
-            matters.filter((matter) => matter.risk === "HIGH").length + "건",
-            "고위험 세무 업무",
-          ],
-          [findings + "건", "미해결 쟁점"],
-        ].map(([value, label], index) => (
-          <div className="mini-stat" key={label}>
-            <span className="mini-stat-icon">
-              {index === 0 ? (
-                <BriefcaseBusiness size={18} />
-              ) : index === 1 ? (
-                <CircleAlert size={18} />
-              ) : (
-                <ShieldCheck size={18} />
-              )}
-            </span>
-            <div>
-              <strong>{value}</strong>
-              <span>{label}</span>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      <div className="sr-only" aria-live="polite">
-        <CheckCircle2 /> 현재 업무 공간의 현황을 불러왔습니다.
-      </div>
+      <DashboardControlRoom matters={matters} today={dateKey} />
     </>
   );
 }

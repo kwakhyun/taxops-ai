@@ -56,6 +56,7 @@ export function getEngagementStageIndex(matter: Matter) {
 export function getEngagementSectionHref(
   key: EngagementSectionKey,
   matterId: string,
+  canReview = false,
 ) {
   const encodedMatterId = encodeURIComponent(matterId);
   switch (key) {
@@ -68,7 +69,9 @@ export function getEngagementSectionHref(
     case "calculation":
       return `/assistant?matter=${encodedMatterId}#analysis-workspace`;
     case "review":
-      return "/reviews";
+      return canReview
+        ? `/reviews?matter=${encodedMatterId}`
+        : `/cases/${encodedMatterId}#review-status`;
     case "filing":
       return `/cases/${encodedMatterId}#filing`;
   }

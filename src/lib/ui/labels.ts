@@ -139,3 +139,12 @@ export function reviewVerdictLabel(value: string) {
 export function jurisdictionLabel(value: string) {
   return value === "KR" ? "대한민국" : value;
 }
+
+export function matchingAuditActions(query: string) {
+  const normalized = query.trim().toLocaleLowerCase("ko-KR");
+  return Object.entries(auditActionLabels)
+    .filter(([key, label]) =>
+      `${key} ${label}`.toLocaleLowerCase("ko-KR").includes(normalized),
+    )
+    .map(([key]) => key);
+}

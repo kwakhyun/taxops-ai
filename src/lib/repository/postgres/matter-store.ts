@@ -1,4 +1,10 @@
 import "server-only";
+import {
+  escapeLike,
+  type MatterQuery,
+  type MatterSearchItem,
+  type PageResult,
+} from "@/lib/contracts/listing";
 
 import type { CreateMatterInput } from "@/lib/contracts/cases";
 import { withTenantSql } from "@/lib/db/client";
@@ -41,7 +47,7 @@ function mapMatter(row: MatterRow): Matter {
     risk: row.risk,
     progress: progressFor(row.status),
     dueDate: displayDate(row.due_at),
-    openFindings: 0,
+    openFindings: null,
     evidenceCoverage: total ? Math.round((indexed / total) * 100) : 0,
     updatedAt: displayDate(row.updated_at),
     summary: row.summary,
@@ -53,7 +59,7 @@ const matterSelect = `
          owner.name AS owner, reviewer.name AS reviewer, m.status, m.risk,
          m.due_at, m.updated_at, m.summary,
          count(d.id)::int AS document_count,
-         count(d.id) FILTER (WHERE d.status = 'INDEXED')::int AS indexed_count
+         count(d.id) FILTER (WHERE d.status = 'INDEXED' AND d.evidence_status = 'APPROVED')::int AS indexed_count
   FROM matters m
   JOIN clients c ON c.tenant_id = m.tenant_id AND c.id = m.client_id
   JOIN users owner ON owner.id = m.owner_id
@@ -201,6 +207,7 @@ export async function getMatterAnalysis(
          AND approval.target_version = workpaper.current_version
         WHERE workpaper.tenant_id = run.tenant_id
           AND workpaper.matter_id = run.matter_id
+          AND version.provenance->>'runId' = run.id::text
         ORDER BY version.created_at DESC, workpaper.id DESC
         LIMIT 1
       ) artifact ON true
@@ -346,10 +353,70 @@ export async function createMatter(
       risk: "LOW",
       progress: 8,
       dueDate: input.dueDate,
-      openFindings: 0,
+      openFindings: null,
       evidenceCoverage: 0,
       updatedAt: "방금 전",
       summary: input.summary,
     } satisfies Matter;
+  });
+}
+
+export async function queryMatters(
+  user: SessionUser,
+  query: MatterQuery,
+): Promise<PageResult<Matter>> {
+  return withTenantSql(user.tenantId, async (transaction) => {
+    const values = [user.tenantId, `%${escapeLike(query.q)}%`, query.risk];
+    const where =
+      "m.tenant_id = $1 AND concat_ws(' ', c.name, m.tax_type, m.tax_period, m.summary) ILIKE $2 AND ($3 = 'ALL' OR m.risk::text = $3)";
+    const counts = await transaction.unsafe<{ total: number }[]>(
+      `SELECT count(*)::int AS total FROM matters m JOIN clients c ON c.tenant_id = m.tenant_id AND c.id = m.client_id WHERE ${where}`,
+      values,
+    );
+    const rows = await transaction.unsafe<MatterRow[]>(
+      `WITH selected_matters AS (
+      SELECT m.* FROM matters m JOIN clients c ON c.tenant_id = m.tenant_id AND c.id = m.client_id
+      WHERE ${where} ORDER BY m.updated_at DESC, m.id DESC LIMIT $4 OFFSET $5
+    ) ${matterSelect.replace("FROM matters m", "FROM selected_matters m")}
+      GROUP BY m.id, m.tax_type, m.tax_period, m.status, m.risk, m.due_at, m.updated_at, m.summary, c.name, owner.name, reviewer.name
+      ORDER BY m.updated_at DESC, m.id DESC`,
+      [...values, query.pageSize, (query.page - 1) * query.pageSize],
+    );
+    return {
+      items: rows.map(mapMatter),
+      total: counts[0]?.total ?? 0,
+      page: query.page,
+      pageSize: query.pageSize,
+    };
+  });
+}
+
+// Search returns only navigation fields and never joins or aggregates documents.
+export async function searchMatters(
+  user: SessionUser,
+  query: MatterQuery,
+): Promise<PageResult<MatterSearchItem>> {
+  return withTenantSql(user.tenantId, async (transaction) => {
+    const rows = await transaction<
+      {
+        id: string;
+        client: string;
+        taxType: string;
+        period: string;
+        summary: string;
+      }[]
+    >`
+      SELECT m.id::text, c.name AS client, m.tax_type AS "taxType", m.tax_period AS period, m.summary
+      FROM matters m JOIN clients c ON c.tenant_id = m.tenant_id AND c.id = m.client_id
+      WHERE m.tenant_id = ${user.tenantId}
+        AND concat_ws(' ', c.name, m.tax_type, m.tax_period, m.summary) ILIKE ${`%${escapeLike(query.q)}%`}
+      ORDER BY m.updated_at DESC, m.id DESC LIMIT ${query.pageSize}
+    `;
+    return {
+      items: rows,
+      total: rows.length,
+      page: 1,
+      pageSize: query.pageSize,
+    };
   });
 }

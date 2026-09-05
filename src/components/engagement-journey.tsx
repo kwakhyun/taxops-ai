@@ -27,9 +27,11 @@ const icons: Record<(typeof engagementSections)[number]["key"], LucideIcon> = {
 export function EngagementJourney({
   matter,
   compact = false,
+  canReview = false,
 }: {
   matter: Matter;
   compact?: boolean;
+  canReview?: boolean;
 }) {
   const activeIndex = getEngagementStageIndex(matter);
   const current = engagementSections[activeIndex] ?? engagementSections[0];
@@ -68,7 +70,11 @@ export function EngagementJourney({
               key={section.key}
             >
               <Link
-                href={getEngagementSectionHref(section.key, matter.id)}
+                href={getEngagementSectionHref(
+                  section.key,
+                  matter.id,
+                  canReview,
+                )}
                 aria-current={state === "active" ? "step" : undefined}
               >
                 <span className="engagement-stage-index" aria-hidden="true">

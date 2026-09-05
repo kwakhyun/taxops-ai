@@ -11,6 +11,7 @@ import {
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { IngestionJobStatus } from "@/components/ingestion-job-status";
 import type { Matter } from "@/lib/domain/types";
 
 type UploadResult = {
@@ -35,6 +36,7 @@ export function UploadPanel({
   const uploadLock = useRef(false);
   const [selectedMatterId, setSelectedMatterId] = useState(matterId ?? "");
   const [dragging, setDragging] = useState(false);
+  const [jobs, setJobs] = useState<Array<{ id: string; name: string }>>([]);
   const [result, setResult] = useState<UploadResult>();
   const [sourceType, setSourceType] = useState<
     "BUSINESS_RECORD" | "TAX_AUTHORITY" | "INTERNAL_POLICY"
@@ -104,6 +106,12 @@ export function UploadPanel({
           ? "동일한 파일이 이미 처리 대기 중입니다."
           : `보안 검사 작업 ${payload.data.job.id.slice(-8)}이 대기열에 추가됐습니다.`,
       });
+      const jobId = payload.data.job.id;
+      setJobs((current) =>
+        current.some((job) => job.id === jobId)
+          ? current
+          : [...current, { id: jobId, name: file.name }],
+      );
       router.refresh();
     } catch (cause) {
       setResult({
@@ -282,6 +290,9 @@ export function UploadPanel({
           </button>
         </div>
       ) : null}
+      {jobs.map((job) => (
+        <IngestionJobStatus key={job.id} {...job} />
+      ))}
     </section>
   );
 }

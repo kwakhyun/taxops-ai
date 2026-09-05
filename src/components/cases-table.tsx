@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { ChevronRight, Filter, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { StatusPill } from "@/components/status-pill";
 import { TableViewport } from "@/components/table-viewport";
+import { usePagedQuery } from "@/components/use-paged-query";
+import { Pagination } from "@/components/pagination";
+import type { PageResult } from "@/lib/contracts/listing";
 import type { Matter, RiskLevel } from "@/lib/domain/types";
 
 const riskFilters: Array<{ value: RiskLevel | "ALL"; label: string }> = [
@@ -14,22 +17,23 @@ const riskFilters: Array<{ value: RiskLevel | "ALL"; label: string }> = [
   { value: "LOW", label: "낮음" },
 ];
 
-export function CasesTable({ matters }: { matters: Matter[] }) {
+export function CasesTable({ initial }: { initial: PageResult<Matter> }) {
   const [query, setQuery] = useState("");
   const [risk, setRisk] = useState<RiskLevel | "ALL">("ALL");
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("ko-KR");
-    return matters.filter((matter) => {
-      const matchesRisk = risk === "ALL" || matter.risk === risk;
-      const matchesQuery =
-        !normalized ||
-        `${matter.client} ${matter.taxType} ${matter.period}`
-          .toLocaleLowerCase("ko-KR")
-          .includes(normalized);
-      return matchesRisk && matchesQuery;
-    });
-  }, [matters, query, risk]);
+  const [page, setPage] = useState(1);
+  const params = new URLSearchParams({
+    q: query,
+    risk,
+    page: String(page),
+  }).toString();
+  const { result, loading, error, reload } = usePagedQuery(
+    "/api/v1/cases",
+    params,
+    initial,
+    "q=&risk=ALL&page=1",
+  );
+  const filtered = loading ? [] : result.items;
 
   return (
     <section className="card cases-card">
@@ -39,7 +43,11 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
           <span className="sr-only">세무 업무 검색</span>
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            maxLength={200}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
             placeholder="고객사, 세목, 기간 검색"
           />
         </label>
@@ -52,17 +60,33 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
               key={filter.value}
               className={`filter-chip ${risk === filter.value ? "filter-chip-active" : ""}`}
               type="button"
-              onClick={() => setRisk(filter.value)}
+              onClick={() => {
+                setRisk(filter.value);
+                setPage(1);
+              }}
               aria-pressed={risk === filter.value}
             >
               {filter.label}
             </button>
           ))}
         </div>
-        <span className="result-count">세무 업무 {filtered.length}건</span>
+        <span className="result-count">
+          {loading ? "조회 중" : `세무 업무 ${result.total}건`}
+        </span>
       </div>
 
-      {filtered.length ? (
+      {loading ? (
+        <p className="listing-state" role="status">
+          세무 업무를 조회하고 있습니다.
+        </p>
+      ) : error ? (
+        <p className="listing-state" role="alert">
+          {error}{" "}
+          <button type="button" onClick={reload}>
+            다시 시도
+          </button>
+        </p>
+      ) : filtered.length ? (
         <TableViewport label="세무 업무 목록">
           <table className="data-table cases-table responsive-table">
             <thead>
@@ -71,7 +95,7 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
                 <th>담당자 · 검토자</th>
                 <th>상태</th>
                 <th>리스크</th>
-                <th>근거 충족률</th>
+                <th>근거 사용 승인율</th>
                 <th>마감일</th>
                 <th>
                   <span className="sr-only">업무 열기</span>
@@ -110,7 +134,7 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
                   <td data-label="리스크">
                     <StatusPill status={matter.risk} />
                   </td>
-                  <td data-label="근거 충족률">
+                  <td data-label="근거 사용 승인율">
                     <div className="coverage-cell">
                       <strong>{matter.evidenceCoverage}%</strong>
                       <div className="progress-track">
@@ -149,6 +173,13 @@ export function CasesTable({ matters }: { matters: Matter[] }) {
           </div>
         </div>
       )}
+      <Pagination
+        page={page}
+        pageSize={result.pageSize}
+        total={result.total}
+        disabled={loading}
+        onPageChange={setPage}
+      />
     </section>
   );
 }

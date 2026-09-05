@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Activity,
   BadgeCheck,
@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Dialog } from "@/components/dialog";
-import type { Matter, Permission } from "@/lib/domain/types";
+import type { MatterSearchItem } from "@/lib/contracts/listing";
+import type { Permission } from "@/lib/domain/types";
 
 interface SearchItem {
   id: string;
@@ -104,7 +105,7 @@ const destinations: SearchItem[] = [
   },
 ];
 
-function matterSearchItem(matter: Matter): SearchItem {
+function matterSearchItem(matter: MatterSearchItem): SearchItem {
   return {
     id: `matter-${matter.id}`,
     href: `/cases/${matter.id}`,
@@ -120,38 +121,70 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [matters, setMatters] = useState<Matter[]>();
+  const [matters, setMatters] = useState<MatterSearchItem[]>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const canReadCases = permissions.includes("case:read");
 
-  const loadMatters = useCallback(async () => {
-    if (loading || !canReadCases) return;
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/v1/cases", { cache: "no-store" });
-      const payload = (await response.json()) as {
-        data?: Matter[];
-        error?: { message?: string };
-      };
-      if (!response.ok || !payload.data) {
-        throw new Error(
-          payload.error?.message ?? "검색 대상을 불러오지 못했습니다.",
-        );
+  const pathname = usePathname();
+  const cache = useRef(
+    new Map<string, { at: number; items: MatterSearchItem[] }>(),
+  );
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    if (!open || !canReadCases) return;
+    const controller = new AbortController();
+    const key = `${pathname}:${query.trim()}`;
+    const timer = setTimeout(async () => {
+      setError("");
+      const cached = cache.current.get(key);
+      if (cached && Date.now() - cached.at < 30000 && retry === 0) {
+        setMatters(cached.items);
+        setLoading(false);
+        return;
       }
-      setMatters(payload.data);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "검색 대상 조회 실패");
-    } finally {
-      setLoading(false);
-    }
-  }, [canReadCases, loading]);
+      setLoading(true);
+      try {
+        const response = await fetch(
+          `/api/v1/cases/search?q=${encodeURIComponent(query.trim())}`,
+          {
+            cache: "no-store",
+            signal: AbortSignal.any([
+              controller.signal,
+              AbortSignal.timeout(15000),
+            ]),
+          },
+        );
+        const payload = await response.json();
+        if (!response.ok || !Array.isArray(payload.data))
+          throw new Error(
+            payload.error?.message ?? "검색 대상을 불러오지 못했습니다.",
+          );
+        if (!controller.signal.aborted) {
+          if (cache.current.size >= 20) cache.current.clear();
+          cache.current.set(key, { at: Date.now(), items: payload.data });
+          setMatters(payload.data);
+        }
+      } catch (cause) {
+        if (!controller.signal.aborted) {
+          setMatters([]);
+          setError(
+            cause instanceof Error ? cause.message : "검색 대상 조회 실패",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [open, canReadCases, query, pathname, retry]);
 
   const openSearch = useCallback(() => {
     setOpen(true);
-    void loadMatters();
-  }, [loadMatters]);
+  }, []);
 
   useEffect(() => {
     const toggle = (event: KeyboardEvent) => {
@@ -175,7 +208,7 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
     );
     const allItems = [
       ...allowedDestinations,
-      ...(matters ?? []).map(matterSearchItem),
+      ...(canReadCases ? (matters ?? []) : []).map(matterSearchItem),
     ];
     const normalized = query.trim().toLocaleLowerCase("ko-KR");
     if (!normalized) return allItems.slice(0, 9);
@@ -186,7 +219,7 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
           .includes(normalized),
       )
       .slice(0, 9);
-  }, [matters, permissions, query]);
+  }, [matters, permissions, query, canReadCases]);
 
   function close() {
     setOpen(false);
@@ -201,11 +234,11 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label="세무 업무, 자료, 고객사 검색"
+        aria-label="고객사, 세목, 화면 검색"
         onClick={openSearch}
       >
         <Search size={17} aria-hidden="true" />
-        <span>세무 업무, 자료, 고객사 검색</span>
+        <span>고객사, 세목, 화면 검색</span>
         <kbd>⌘ K</kbd>
       </button>
 
@@ -224,6 +257,7 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
             <input
               id="command-palette-input"
               value={query}
+              maxLength={200}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
                 const first = results[0];
@@ -274,7 +308,7 @@ export function CommandSearch({ permissions }: { permissions: Permission[] }) {
               <button
                 type="button"
                 className="button button-secondary button-compact"
-                onClick={() => void loadMatters()}
+                onClick={() => setRetry((value) => value + 1)}
               >
                 다시 시도
               </button>

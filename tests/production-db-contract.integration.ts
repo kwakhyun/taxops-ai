@@ -28,6 +28,9 @@ import {
   validateOidcSessionToken,
 } from "@/lib/auth/session";
 import {
+  queryMatters,
+  queryAuditEvents,
+  searchMatters,
   createMatter,
   createWorkpaperDraft,
   finishAgentRun,
@@ -42,6 +45,8 @@ import {
   setReviewDecision,
   startAgentRun,
 } from "@/lib/repository/postgres-store";
+
+import { matterQuerySchema, auditQuerySchema } from "@/lib/contracts/listing";
 
 const tenantId = "00000000-0000-4000-8000-000000000001";
 const primaryMatterId = "00000000-0000-4000-8000-000000000301";
@@ -1548,13 +1553,8 @@ describe("PostgreSQL production contracts", () => {
     );
     expect(restoredAfterLaterFailure).toMatchObject({
       latestRun: { id: laterRunId, status: "FAILED" },
-      workpaper: {
-        title,
-        conclusion,
-        reviewStatus: "PENDING",
-      },
     });
-    expect(restoredAfterLaterFailure?.workpaper?.evidence).toHaveLength(1);
+    expect(restoredAfterLaterFailure?.workpaper).toBeUndefined();
   });
 
   it("does not persist when the independent verifier rejects the draft", async () => {
@@ -2278,5 +2278,104 @@ describe("PostgreSQL production contracts", () => {
     await expect(
       getReviewArtifactHash(analyst, reviewTargetId),
     ).resolves.toBeUndefined();
+  });
+  it("paginates scoped matters and calculates approved document coverage", async () => {
+    const first = await queryMatters(
+      analyst,
+      matterQuerySchema.parse({ pageSize: 1 }),
+    );
+    const second = await queryMatters(
+      analyst,
+      matterQuerySchema.parse({ pageSize: 1, page: 2 }),
+    );
+    expect(first.total).toBeGreaterThan(1);
+    expect(first.items).toHaveLength(1);
+    expect(second.items).toHaveLength(1);
+    expect(first.items[0]!.id).not.toBe(second.items[0]!.id);
+    const all = await queryMatters(
+      analyst,
+      matterQuerySchema.parse({ pageSize: 100 }),
+    );
+    expect(all.items.some((item) => item.id === isolatedMatterId)).toBe(false);
+    const matter = all.items.find((item) => item.id === primaryMatterId)!;
+    const [counts] = await owner`
+      SELECT count(*)::int AS total,
+      count(*) FILTER (WHERE status = 'INDEXED' AND evidence_status = 'APPROVED')::int AS approved
+      FROM documents WHERE tenant_id = ${tenantId} AND matter_id = ${primaryMatterId}
+    `;
+    expect(matter.openFindings).toBeNull();
+    expect(matter.evidenceCoverage).toBe(
+      Math.round((counts!.approved / counts!.total) * 100),
+    );
+    const found = await searchMatters(
+      analyst,
+      matterQuerySchema.parse({ q: matter.client, pageSize: 9 }),
+    );
+    expect(found.items.map((item) => item.id)).toContain(primaryMatterId);
+    expect(Object.keys(found.items[0]!).sort()).toEqual([
+      "client",
+      "id",
+      "period",
+      "summary",
+      "taxType",
+    ]);
+    expect(
+      (
+        await queryMatters(
+          analyst,
+          matterQuerySchema.parse({ q: "does-not-exist%_" }),
+        )
+      ).total,
+    ).toBe(0);
+  });
+
+  it("searches audit history older than 200 rows and keeps tenant filters", async () => {
+    const prefix = `tr_paged_${crypto.randomUUID()}_`;
+    await app.begin(async (transaction) => {
+      await transaction`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
+      await transaction`
+        SELECT append_application_audit_event(${tenantId}::uuid, ${analyst.id}::uuid,
+        'MATTER_CREATED', 'matter', ${primaryMatterId}::uuid, 'SUCCESS',
+        ${prefix} || lpad(value::text, 3, '0'), '{}'::jsonb) FROM generate_series(1, 205) value
+      `;
+    });
+    const query = auditQuerySchema.parse({ q: prefix, pageSize: 2 });
+    const first = await queryAuditEvents(reviewer, query);
+    const second = await queryAuditEvents(reviewer, { ...query, page: 2 });
+    expect(first.total).toBe(205);
+    expect(
+      new Set([...first.items, ...second.items].map((item) => item.id)).size,
+    ).toBe(4);
+    const [firstStored] = await owner`
+      SELECT trace_id FROM audit_events WHERE tenant_id = ${tenantId}
+      AND trace_id LIKE ${`${prefix}%`}
+      ORDER BY occurred_at, id LIMIT 1
+    `;
+    const oldest = await queryAuditEvents(reviewer, {
+      ...query,
+      q: firstStored!.trace_id,
+    });
+    expect(oldest.items).toHaveLength(1);
+    expect(
+      (await queryAuditEvents(reviewer, { ...query, from: "2099-01-01" }))
+        .total,
+    ).toBe(0);
+    expect(
+      (await queryAuditEvents(reviewer, { ...query, to: "2000-01-01" })).total,
+    ).toBe(0);
+    expect((await queryAuditEvents(isolatedAnalyst, query)).total).toBe(0);
+    expect(
+      (await queryAuditEvents(reviewer, { ...query, outcome: "FAILED" })).total,
+    ).toBe(0);
+    const named = await queryAuditEvents(reviewer, {
+      ...query,
+      q: analyst.name,
+    });
+    expect(named.total).toBeGreaterThanOrEqual(205);
+    const labeled = await queryAuditEvents(reviewer, {
+      ...query,
+      q: "세무 업무 등록",
+    });
+    expect(labeled.total).toBeGreaterThanOrEqual(205);
   });
 });

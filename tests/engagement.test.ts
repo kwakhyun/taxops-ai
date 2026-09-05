@@ -55,7 +55,7 @@ describe("engagement UI model", () => {
       "/documents?matter=vat%202025%2Fq4",
       "/assistant?matter=vat%202025%2Fq4",
       "/assistant?matter=vat%202025%2Fq4#analysis-workspace",
-      "/reviews",
+      "/cases/vat%202025%2Fq4#review-status",
       "/cases/vat%202025%2Fq4#filing",
     ]);
   });

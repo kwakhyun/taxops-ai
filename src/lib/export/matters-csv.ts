@@ -11,7 +11,7 @@ const headers = [
   "진행 상태",
   "리스크",
   "진행률",
-  "근거 충족률",
+  "근거 사용 승인율",
   "마감일",
   "미해결 검토사항",
   "업무 요약",
@@ -29,7 +29,7 @@ export function buildMattersCsv(matters: Matter[]) {
     `${matter.progress}%`,
     `${matter.evidenceCoverage}%`,
     matter.dueDate,
-    matter.openFindings,
+    matter.openFindings ?? "미평가",
     matter.summary,
   ]);
   return buildCsv([headers, ...rows]);

@@ -288,9 +288,7 @@ test.describe("Workspace UX regression", () => {
   }) => {
     await page.setViewportSize({ width: 320, height: 568 });
     await page.goto("/cases/new");
-    await page
-      .getByRole("button", { name: "세무 업무, 자료, 고객사 검색" })
-      .click();
+    await page.getByRole("button", { name: "고객사, 세목, 화면 검색" }).click();
     await expect(page.getByRole("dialog", { name: "통합 검색" })).toBeVisible();
     await page.keyboard.press("Escape");
     await page.getByLabel("고객사명").fill("  ");
@@ -319,9 +317,7 @@ test.describe("Workspace UX regression", () => {
     await expect(
       page.getByRole("heading", { name: "모바일 검증 고객사", level: 1 }),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: "세무 업무, 자료, 고객사 검색" })
-      .click();
+    await page.getByRole("button", { name: "고객사, 세목, 화면 검색" }).click();
     await page.getByLabel("통합 검색어").fill("모바일 검증 고객사");
     await expect(
       page
@@ -362,7 +358,7 @@ test.describe("Workspace UX regression", () => {
     await page.setViewportSize({ width: 320, height: 568 });
     await page.goto("/documents?matter=vat-2025-q4");
     const search = page.getByRole("button", {
-      name: "세무 업무, 자료, 고객사 검색",
+      name: "고객사, 세목, 화면 검색",
     });
     await search.click();
     let dialog = page.getByRole("dialog", { name: "통합 검색" });
@@ -447,7 +443,7 @@ test.describe("Workspace UX regression", () => {
     await page.goto("/audit");
     await page.getByRole("button", { name: "차단", exact: true }).click();
     const rows = page.locator(".audit-table tbody tr");
-    expect(await rows.count()).toBeGreaterThan(0);
+    await expect.poll(() => rows.count()).toBeGreaterThan(0);
     for (const row of await rows.all()) await expect(row).toContainText("차단");
     const exported = page.waitForEvent("download");
     await page.getByRole("button", { name: "검색 결과 내보내기" }).click();
@@ -458,7 +454,7 @@ test.describe("Workspace UX regression", () => {
     ).toBeVisible();
     await page.getByRole("button", { name: "검색 초기화" }).click();
     await expect(page.getByLabel("감사 로그 검색")).toHaveValue("");
-    expect(await rows.count()).toBeGreaterThan(0);
+    await expect.poll(() => rows.count()).toBeGreaterThan(0);
   });
 
   test("quality meters use the report values and overflowing tables are keyboard scrollable", async ({

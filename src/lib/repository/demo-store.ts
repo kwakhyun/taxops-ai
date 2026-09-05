@@ -1,3 +1,11 @@
+import {
+  pageResult,
+  matchesMatter,
+  auditDateBounds,
+  type MatterQuery,
+  type AuditQuery,
+} from "@/lib/contracts/listing";
+import { filterAuditEvents } from "@/lib/ui/audit";
 import type {
   AuditEvent,
   DocumentRecord,
@@ -101,6 +109,7 @@ const demoReviewContent = {
   openItems: ["거래 2건의 업무 관련성 소명 확인"],
 };
 const demoReviewProvenance = {
+  runId: "run_01JZX7A8VQ",
   promptVersion: taxMemoPrompt.id,
   promptHash: taxMemoPrompt.contentHash,
   retrieverVersion: "hybrid-rag.v1.2.0",
@@ -239,7 +248,25 @@ function getStore(): DemoStore {
 
 export function listMatters(user: SessionUser) {
   if (user.tenantId !== "tenant_hanul") return [];
-  return structuredClone(getStore().matters);
+  return structuredClone(getStore().matters).map((matter) => {
+    const documents = getStore().documents.filter(
+      (document) => document.matterId === matter.id,
+    );
+    return {
+      ...matter,
+      evidenceCoverage: documents.length
+        ? Math.round(
+            (100 *
+              documents.filter(
+                (document) =>
+                  document.status === "INDEXED" &&
+                  document.evidenceStatus === "APPROVED",
+              ).length) /
+              documents.length,
+          )
+        : 0,
+    };
+  });
 }
 
 export function getTenantAiPolicy(user: SessionUser) {
@@ -532,8 +559,7 @@ export function setDocumentEvidenceDecision(
 
 export function findMatter(user: SessionUser, id: string) {
   if (user.tenantId !== "tenant_hanul") return undefined;
-  const matter = getStore().matters.find((item) => item.id === id);
-  return matter ? structuredClone(matter) : undefined;
+  return listMatters(user).find((item) => item.id === id);
 }
 
 export function getMatterAnalysis(
@@ -543,10 +569,18 @@ export function getMatterAnalysis(
   if (user.tenantId !== "tenant_hanul") return undefined;
   const latestRun = agentRuns.find((run) => run.matterId === matterId);
   if (!latestRun) return undefined;
-  const review = getStore().reviews.find((item) => item.matterId === matterId);
+  const review = getStore().reviews.find(
+    (item) =>
+      item.matterId === matterId && item.provenance.runId === latestRun.id,
+  );
   return {
-    latestRun: structuredClone(latestRun),
-    workflowSteps: structuredClone(workflowSteps),
+    latestRun: {
+      ...structuredClone(latestRun),
+      status: review?.status === "APPROVED" ? "COMPLETED" : latestRun.status,
+    },
+    workflowSteps: structuredClone(workflowSteps).map((step) =>
+      review?.status === "APPROVED" ? { ...step, status: "COMPLETE" } : step,
+    ),
     workpaper: review
       ? {
           title: review.title,
@@ -597,7 +631,7 @@ export function createMatter(
     status: "IN_REVIEW",
     risk: "LOW",
     progress: 8,
-    openFindings: 0,
+    openFindings: null,
     evidenceCoverage: 0,
     updatedAt: "방금 전",
   };
@@ -845,4 +879,45 @@ export function appendAuditEvent(
   };
   store.auditEvents.unshift(event);
   return structuredClone(event);
+}
+
+export function queryMatters(user: SessionUser, query: MatterQuery) {
+  return pageResult(
+    listMatters(user).filter((matter) => matchesMatter(matter, query)),
+    query,
+  );
+}
+export function searchMatters(user: SessionUser, query: MatterQuery) {
+  const items =
+    user.tenantId === "tenant_hanul"
+      ? getStore()
+          .matters.filter((matter) => matchesMatter(matter, query))
+          .slice(0, query.pageSize)
+          .map(({ id, client, taxType, period, summary }) => ({
+            id,
+            client,
+            taxType,
+            period,
+            summary,
+          }))
+      : [];
+  return { items, total: items.length, page: 1, pageSize: query.pageSize };
+}
+export function queryAuditEvents(user: SessionUser, query: AuditQuery) {
+  const bounds = auditDateBounds(query);
+  const events = filterAuditEvents(
+    listAuditEvents(user),
+    query.q,
+    query.outcome,
+  )
+    .filter(
+      (event) =>
+        (!bounds.from || new Date(event.occurredAt) >= bounds.from) &&
+        (!bounds.to || new Date(event.occurredAt) < bounds.to),
+    )
+    .sort(
+      (a, b) =>
+        b.occurredAt.localeCompare(a.occurredAt) || b.id.localeCompare(a.id),
+    );
+  return pageResult(events, query);
 }

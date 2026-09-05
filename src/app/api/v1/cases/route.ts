@@ -1,10 +1,12 @@
 import { createMatterSchema } from "@/lib/contracts/cases";
 import { getSessionUser } from "@/lib/auth/session";
 import { requirePermission } from "@/lib/auth/rbac";
-import { createMatter, listMatters } from "@/lib/repository";
+import { createMatter, queryMatters } from "@/lib/repository";
 import { createTraceId } from "@/lib/observability/logger";
 import { apiError, requestIdFrom } from "@/lib/http/errors";
 import { writeLog } from "@/lib/observability/logger";
+
+import { matterQuerySchema } from "@/lib/contracts/listing";
 
 export const runtime = "nodejs";
 
@@ -13,9 +15,18 @@ export async function GET(request: Request) {
   try {
     const user = await getSessionUser();
     requirePermission(user, "case:read");
+    const query = matterQuerySchema.parse(
+      Object.fromEntries(new URL(request.url).searchParams),
+    );
+    const { items, ...meta } = await queryMatters(user, query);
     return Response.json(
-      { data: await listMatters(user), meta: { requestId } },
-      { headers: { "x-request-id": requestId } },
+      { data: items, meta: { requestId, ...meta } },
+      {
+        headers: {
+          "x-request-id": requestId,
+          "Cache-Control": "private, no-store",
+        },
+      },
     );
   } catch (error) {
     return apiError(error, requestId);

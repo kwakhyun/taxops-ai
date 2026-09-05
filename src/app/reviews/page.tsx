@@ -8,7 +8,12 @@ import { listReviewRequests } from "@/lib/repository";
 
 export const metadata: Metadata = { title: "검토 및 승인" };
 
-export default async function ReviewsPage() {
+export default async function ReviewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ matter?: string }>;
+}) {
+  const { matter } = await searchParams;
   const user = await getSessionUser();
   if (!can(user, "workpaper:review")) notFound();
   const requests = await listReviewRequests(user);
@@ -19,7 +24,14 @@ export default async function ReviewsPage() {
         title="검토 및 승인"
         description="AI 초안의 근거와 계산을 확인하고 검토 대상 버전을 고정한 뒤 승인 결과를 기록합니다."
       />
-      <ReviewWorkspace requests={requests} reviewerName={user.name} />
+      <ReviewWorkspace
+        requests={
+          matter
+            ? requests.filter((request) => request.matterId === matter)
+            : requests
+        }
+        reviewerName={user.name}
+      />
     </>
   );
 }

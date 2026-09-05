@@ -24,7 +24,21 @@ export async function GET(
         { status: 404, headers: { "x-request-id": requestId } },
       );
     }
-    return Response.json({ data: job, meta: { requestId } });
+    return Response.json(
+      {
+        data: job,
+        meta: {
+          requestId,
+          processingAvailable: Boolean(process.env.DATABASE_URL),
+        },
+      },
+      {
+        headers: {
+          "Cache-Control": "private, no-store",
+          "x-request-id": requestId,
+        },
+      },
+    );
   } catch (error) {
     return apiError(error, requestId);
   }

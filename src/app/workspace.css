@@ -726,3 +726,71 @@
     height: 48px;
   }
 }
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border-top: 1px solid var(--ink-150);
+  font-size: var(--font-size-sm);
+}
+.listing-date-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+  padding: 0 20px 16px;
+  font-size: var(--font-size-sm);
+}
+.listing-date-filters label {
+  display: grid;
+  gap: 4px;
+}
+.listing-date-filters input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--ink-300);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  background: white;
+}
+.listing-date-filters span {
+  flex-basis: 100%;
+  color: var(--ink-600);
+}
+.listing-state {
+  padding: 20px;
+}
+.ingestion-job-status {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  border-top: 1px solid var(--ink-200);
+  padding-top: 12px;
+  font-size: var(--font-size-sm);
+}
+.ingestion-job-status .button {
+  justify-self: start;
+}
+@media (max-width: 860px) {
+  .listing-date-filters input {
+    font-size: 16px;
+  }
+}
+@media (max-width: 420px) {
+  .listing-date-filters label {
+    width: 100%;
+  }
+  .pagination {
+    gap: 8px;
+    padding: 12px;
+  }
+  .pagination > span {
+    order: -1;
+    width: 100%;
+    text-align: center;
+  }
+}

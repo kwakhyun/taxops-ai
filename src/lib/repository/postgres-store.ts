@@ -4,6 +4,7 @@ export {
   appendAuditEvent,
   getAuditIntegrity,
   listAuditEvents,
+  queryAuditEvents,
 } from "@/lib/repository/postgres/audit-store";
 export {
   assertTenantAiSpendBudget,
@@ -29,6 +30,8 @@ export {
   findMatter,
   getMatterAnalysis,
   listMatters,
+  queryMatters,
+  searchMatters,
 } from "@/lib/repository/postgres/matter-store";
 export { searchEvidence } from "@/lib/repository/postgres/retrieval-store";
 export {

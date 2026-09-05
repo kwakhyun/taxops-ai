@@ -229,7 +229,7 @@ test.describe("TaxOps AI accessibility and visual baselines", () => {
         }
       }
       await page
-        .getByRole("button", { name: "세무 업무, 자료, 고객사 검색" })
+        .getByRole("button", { name: "고객사, 세목, 화면 검색" })
         .click();
       await expect(
         page.getByRole("dialog", { name: "통합 검색" }),

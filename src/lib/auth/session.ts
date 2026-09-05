@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import {
   compactDecrypt,
@@ -201,7 +202,7 @@ async function getOidcSession(): Promise<SessionUser> {
   }
 }
 
-export async function getSessionUser(): Promise<SessionUser> {
+export const getSessionUser = cache(async (): Promise<SessionUser> => {
   const authMode = resolveAuthMode(
     process.env.AUTH_MODE,
     process.env.NODE_ENV,
@@ -213,7 +214,7 @@ export async function getSessionUser(): Promise<SessionUser> {
   const cookieStore = await cookies();
   const requestedDemoUser = cookieStore.get(DEMO_COOKIE)?.value ?? "analyst";
   return demoUsers[requestedDemoUser] ?? demoUsers.analyst!;
-}
+});
 
 export async function getReviewerIdentityToken() {
   const headerStore = await headers();

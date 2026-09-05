@@ -39,7 +39,9 @@ export interface Matter {
   risk: RiskLevel;
   progress: number;
   dueDate: string;
-  openFindings: number;
+  /** null means that findings have not been assessed. */
+  openFindings: number | null;
+  /** Percentage of registered documents that are indexed and approved. */
   evidenceCoverage: number;
   updatedAt: string;
   summary: string;

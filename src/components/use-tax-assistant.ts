@@ -24,7 +24,12 @@ export function useTaxAssistant({
       new DefaultChatTransport<TaxAssistantMessage>({
         api: "/api/v1/assistant",
         prepareSendMessagesRequest: ({ messages }) => ({
-          body: { messages, matterId },
+          body: {
+            messages: messages
+              .filter((message) => message.role === "user")
+              .slice(-1),
+            matterId,
+          },
         }),
       }),
     [matterId],
