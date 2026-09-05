@@ -4,22 +4,22 @@
 
 [![quality-gates](https://github.com/kwakhyun/taxops-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kwakhyun/taxops-ai/actions/workflows/ci.yml)
 
-- **프로젝트 성격:** AI 개발 도구를 활용해 만든 개인 채용 포트폴리오
+- **프로젝트 성격:** AI 개발 도구를 활용해 구현한 세무 업무 플랫폼
 - **구현 범위:** 업무 UX, Next.js 서버, PostgreSQL, 파일 처리, RAG 에이전트, 보안 통제, 관측성과 배포 참조
 - **검증 방식:** 타입 검사, 단위·계약·브라우저 테스트, AI 평가, 컨테이너 빌드와 Terraform 검증을 CI에서 반복 실행
 - **운영 상태:** [Vercel 공개 데모](https://taxops-ai.vercel.app)와 AWS 운영 환경을 위한 Terraform 참조 구현
 
 공개 데모는 예시 데이터와 결정론적 AI 흐름만 사용하며 입력 내용을 영구 저장하지 않습니다. 실제 고객정보나 개인정보는 입력하지 마세요.
 
-제출용 PDF와 영상은 작성 당시의 기록으로 보존합니다. 현재 코드와 화면의 차이는 [제출 자료 정합성 확인](docs/portfolio-consistency.md)에 정리했으며, [9월 5일 개선 전 기준본](https://github.com/kwakhyun/taxops-ai/tree/9a7ff3206564656faaddb4c1c605ea1df4204308)도 확인할 수 있습니다.
+설계 문서와 시연 영상의 작성 기준 및 현재 구현과의 차이는 [버전별 변경 기록](docs/portfolio-consistency.md)에 정리했으며, [9월 5일 개선 전 기준본](https://github.com/kwakhyun/taxops-ai/tree/9a7ff3206564656faaddb4c1c605ea1df4204308)도 확인할 수 있습니다.
 
 ![현재 세무 업무와 검토 대상을 보여 주는 TaxOps AI 대시보드](artifacts/dashboard-visual.png)
 
 ## 86초 시연 영상
 
-2026년 8월에 녹화한 영상으로, 실무자와 검토자 역할, 승인 상태 변화, 모바일 업무 흐름을 보여 줍니다. 영상 속 대시보드와 일부 상태 표시는 9월 5일 개선한 현재 화면과 다릅니다. 재생 버튼을 누르면 이 페이지에서 바로 볼 수 있습니다. 자막이 포함된 무음 영상이며, 예시 데이터와 결정론적 AI 흐름을 사용합니다.
+2026년 8월에 녹화한 영상으로, 실무자와 검토자 역할, 승인 상태 변화, 모바일 업무 흐름을 보여 줍니다. 영상 속 대시보드와 일부 상태 표시는 9월 5일 개선한 현재 화면과 다릅니다. 아래 링크에서 시연 영상을 확인할 수 있습니다. 자막이 포함된 무음 영상이며, 예시 데이터와 결정론적 AI 흐름을 사용합니다.
 
-https://github.com/user-attachments/assets/982b60b5-4995-429e-8822-a78b5ae65eb1
+[86초 시연 영상 보기](https://github.com/kwakhyun/taxops-ai/blob/main/artifacts/portfolio/taxops-ai-demo.mp4)
 
 [시연 범위와 장면별 설명](docs/portfolio-demo.md) | [원본 MP4 다운로드](https://github.com/kwakhyun/taxops-ai/raw/refs/heads/main/artifacts/portfolio/taxops-ai-demo.mp4)
 
@@ -165,12 +165,12 @@ AI 품질 게이트는 Recall@5 90% 이상, 인용 원문 무결성 100%, 적대
 - [API와 MCP 계약](docs/api.md)
 - [운영 런북](docs/operations-runbook.md)
 - [요구사항 추적표](docs/requirements-traceability.md)
-- [제출 영상, 문서와 재현 방법](docs/portfolio-demo.md)
+- [시연 영상, 설계 문서와 재현 방법](docs/portfolio-demo.md)
 - [실제 모델 평가와 개선 실험](docs/live-model-evaluation.md)
 
 ## 사실 범위와 남은 검증
 
-- Vercel 배포는 포트폴리오용 데모입니다. 예시 데이터와 결정론적 AI 흐름만 사용하고 입력을 영구 저장하지 않습니다.
+- Vercel 배포는 기능 시연용 데모입니다. 예시 데이터와 결정론적 AI 흐름만 사용하고 입력을 영구 저장하지 않습니다.
 - AWS Terraform은 형식과 구성 검증을 통과한 참조 구현이며 실제 계정에 적용하지 않았습니다. 실제 IdP, 세무 원천 시스템, 개인정보 비식별화·의미 분류·문서 처리 서비스와도 연결하지 않았습니다.
 - 선택한 설정은 합성 자료 20개 질문의 40회 실행을 통과했습니다. 같은 근거 자료에서 표현과 범위를 바꾼 시험이므로 일반적인 세무 정확도나 실사용 준비 완료를 의미하지 않습니다. 운영 전에는 세무 전문가 검수 세트와 새로운 자료, 실제 Gateway 및 운영 구성의 검증이 필요합니다. 부하, 복구와 침투 테스트, 개인정보 영향평가, 법무 및 보존 정책 승인도 별도로 필요합니다.
 - 공식 세무 원천의 서명 또는 신뢰 가능한 해시값 검증이 필요합니다. 감사 체인도 조직 환경의 외부 WORM 저장소와 서명 기준점에 연결해야 합니다.

@@ -86,7 +86,7 @@
 ## 비교 대상
 
 - 원본 시각 기준
-  - 데스크톱: `/private/tmp/tax-intelligence-home.png` — Tax Intelligence 포트폴리오 관제 화면, 1440 × 1482px
+  - 데스크톱: `/private/tmp/tax-intelligence-home.png` — Tax Intelligence 업무 관제 화면, 1440 × 1482px
   - 모바일: `/private/tmp/tax-intelligence-mobile.png` — Tax Intelligence AI 업무 화면, 390 × 1674px
 - 구현 화면
   - 데스크톱: `tests/e2e/visual-accessibility.spec.ts-snapshots/dashboard-desktop.png` — TaxOps AI 관제 화면, 1440 × 1896px
@@ -137,7 +137,7 @@
 - 수정 후 데스크톱 전체 구성과 모바일 AI 집중 영역을 각각 원본과 구현이 함께 있는 비교판에서 재검수했다.
 - 후속 근거: `artifacts/design-qa-desktop-comparison.png`, `artifacts/design-qa-mobile-comparison.png`.
 - 390px 모바일에서 업무 맥락, 세 탭, AI 실행 경계, 질문 입력과 역할별 하단 메뉴가 겹치거나 잘리지 않는다.
-- 데스크톱에서 포트폴리오 브리핑, 예정 일정, 우선 처리 업무, 검토 현황, Engagement 흐름과 AI 진입점이 동일한 시각 계층 안에 유지된다.
+- 데스크톱에서 전체 업무 요약, 예정 일정, 우선 처리 업무, 검토 현황, Engagement 흐름과 AI 진입점이 동일한 시각 계층 안에 유지된다.
 
 ## 상호작용과 기술 검증
 
@@ -153,7 +153,7 @@
 - [x] 6단계 Engagement 공통 정보구조 적용
 - [x] 권한 대응 모바일 내비게이션과 AI 작업 탭 구현
 - [x] Axe 접근성 및 데스크톱·모바일 시각 회귀 테스트 추가
-- [x] 문서와 포트폴리오 이미지 갱신
+- [x] 문서와 시연 이미지 갱신
 - [x] 공통 글자 크기, 한글 줄바꿈과 모바일 입력 가독성 보정
 
 ## 가독성 후속 검수 — 2026-08-31

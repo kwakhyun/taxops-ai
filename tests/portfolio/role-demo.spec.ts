@@ -115,7 +115,7 @@ test("record analyst, reviewer approval and audit trail", async ({
         name: "portfolio-review-note.txt",
         mimeType: "text/plain",
         buffer: Buffer.from(
-          "포트폴리오용 합성 자료입니다. 기업업무추진비 거래의 지출 목적을 확인합니다.",
+          "시연용 합성 자료입니다. 기업업무추진비 거래의 지출 목적을 확인합니다.",
         ),
       });
       await expect(page.getByRole("status")).toContainText(

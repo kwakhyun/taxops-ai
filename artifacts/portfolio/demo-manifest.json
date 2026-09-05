@@ -6,7 +6,7 @@
   "viewportMobile": "390x650",
   "video": "taxops-ai-demo.mp4",
   "seconds": 85.84,
-  "bytes": 3434421,
+  "bytes": 3516135,
   "width": 1440,
   "height": 1080,
   "disclosure": "Actual local UI recording, synthetic fixtures, deterministic AI, seeded workpaper approval, test-role authentication, no audio.",
@@ -76,5 +76,11 @@
       "title": "13  근거 부족 | 답변 보류와 다음 행동 안내",
       "description": "현재 자료로 확인할 수 없는 질문에는 결론을 만들지 않고 필요한 자료를 안내합니다."
     }
-  ]
+  ],
+  "presentationEdit": {
+    "date": "2026-09-05",
+    "sourceCommit": "dc83255bcf4f6d6faa73e2f439cbb94f6f9ee7ad",
+    "sourceVideoSha256": "0ee18b1ca280e5475aa210b414dbbc0ee0cf5b4e95ae8d38221a0dfec297c907",
+    "description": "Replaced the footer label only. Original UI recording, chapter timing, dimensions, frame count and duration retained."
+  }
 }

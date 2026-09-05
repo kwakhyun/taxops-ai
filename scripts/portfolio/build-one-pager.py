@@ -56,12 +56,12 @@ def decorate(canvas, doc):
     if doc.page > 1:
         raise RuntimeError("Decision note exceeds one page; edit the source or layout.")
     canvas.setTitle("TaxOps AI - 설계 판단과 검증 사례")
-    canvas.setAuthor("TaxOps AI portfolio")
+    canvas.setAuthor("TaxOps AI")
     canvas.setFillColor(colors.HexColor("#FFE600"))
     canvas.rect(38, A4[1] - 30, 52, 4, fill=1, stroke=0)
     canvas.setFont("PortfolioKR", 8)
     canvas.setFillColor(colors.HexColor("#676976"))
-    canvas.drawRightString(A4[0] - 38, 24, "TaxOps AI / 개인 포트폴리오 / 1")
+    canvas.drawRightString(A4[0] - 38, 24, "TaxOps AI / 설계 판단과 검증 사례 / 1")
 
 
 story = []

@@ -38,7 +38,7 @@ const probe = (path: string) =>
 await mkdir(raw, { recursive: true });
 await writeFile(
   resolve(raw, "footer.txt"),
-  "TaxOps AI  |  개인 포트폴리오  |  합성 자료 / 실제 UI 녹화 / 무음 시연\n",
+  "TaxOps AI  |  업무 흐름 시연  |  합성 자료 / 실제 UI 녹화 / 무음 시연\n",
 );
 const chapters = [];
 let offsetSeconds = 0;
