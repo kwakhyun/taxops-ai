@@ -13,14 +13,6 @@
 
 ![현재 세무 업무와 검토 대상을 보여 주는 TaxOps AI 대시보드](artifacts/dashboard-visual.png)
 
-## 86초 시연 영상
-
-실무자와 검토자의 업무 흐름, 근거 확인, 승인 상태 변화와 모바일 사용 방법을 보여 줍니다. 예시 데이터와 결정론적 AI 흐름을 사용하는 자막 포함 무음 영상입니다.
-
-[86초 시연 영상 보기](https://github.com/kwakhyun/taxops-ai/blob/main/artifacts/portfolio/taxops-ai-demo.mp4)
-
-[시연 범위와 장면별 설명](docs/portfolio-demo.md) | [원본 MP4 다운로드](https://github.com/kwakhyun/taxops-ai/raw/refs/heads/main/artifacts/portfolio/taxops-ai-demo.mp4)
-
 ## 5분 검토 방법
 
 설계 의도부터 보려면 [한 페이지 설계 판단](docs/engineering-decisions.md)과 [PDF](output/pdf/taxops-ai-engineering-decisions.pdf)를 확인하세요. [실제 모델 비교 평가](docs/live-model-evaluation.md)에서 응답 품질, 지연 시간, 비용과 평가 범위를 확인할 수 있습니다.
@@ -31,7 +23,7 @@
 4. 모바일 화면으로 전환해 하단 주요 메뉴와 **AI 파트너**의 대화 및 참고 근거 탭을 확인합니다. 자료 첨부는 대화를 떠나지 않고 진행하며, 실행 범위는 참고 근거의 접이식 안내에서 확인할 수 있습니다.
 5. `매입세액 불공제 의심 항목과 신고서 반영 차이` 질문을 실행하고 주장별 근거, 원문 위치와 전문가 검토 대기 상태를 확인합니다. 근거가 없는 질문에는 답변을 보류합니다.
 
-![질문 입력창을 유지하면서 대화와 참고 근거를 전환하는 모바일 AI 파트너](artifacts/assistant-visual.png)
+<img src="artifacts/assistant-visual.png" alt="질문 입력창을 유지하면서 대화와 참고 근거를 전환하는 모바일 AI 파트너" width="390" />
 
 ## 검증 결과
 
@@ -126,7 +118,6 @@ npm run test:e2e     # Chromium 핵심 흐름, 모바일 UX, 접근성, 시각 �
 npm run test:e2e:update # 의도한 UI 변경 뒤 시각 회귀 기준선 갱신
 npm run eval         # 45개 결정론적 입력과 5개 모의 에이전트 실행
 npm run eval:live    # 실모델 평가 계획만 확인, 네트워크 요청 없음
-npm run demo:record  # 별도 로컬 서버에서 역할별 UI 녹화, ffmpeg와 한국어 폰트 필요
 npm run audit:prod   # 운영 의존성의 심각도 high 이상 취약점 차단
 docker compose config -q
 docker compose up --build --abort-on-container-exit --exit-code-from contract-test contract-test
@@ -161,7 +152,7 @@ AI 품질 게이트는 Recall@5 90% 이상, 인용 원문 무결성 100%, 적대
 - [API와 MCP 계약](docs/api.md)
 - [운영 런북](docs/operations-runbook.md)
 - [요구사항 추적표](docs/requirements-traceability.md)
-- [시연 영상, 설계 문서와 재현 방법](docs/portfolio-demo.md)
+- [설계 문서와 PDF 생성 방법](docs/portfolio-demo.md)
 - [실제 모델 평가](docs/live-model-evaluation.md)
 
 ## 사실 범위와 남은 검증
