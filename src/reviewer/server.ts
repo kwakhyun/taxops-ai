@@ -1,6 +1,9 @@
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { createRemoteJWKSet } from "jose";
 import postgres from "postgres";
-import { providerJwtValidationOptions } from "../lib/auth/token-policy.ts";
+import {
+  verifyReviewerIdentity,
+  ReviewerAuthorizationError,
+} from "./identity.ts";
 import {
   isValidApprovalTokenSecret,
   issueApprovalToken,
@@ -154,39 +157,18 @@ async function verifiedIdentity(input: {
   identityToken: string;
   expectedActor: ActorInput;
 }) {
-  const { payload } = await jwtVerify(input.identityToken, oidcJwks, {
-    ...providerJwtValidationOptions(oidcIssuer!, oidcReviewAudience!),
-    requiredClaims: [
-      "sub",
-      "iat",
-      "exp",
-      "tenant_id",
-      "scope",
-      "auth_time",
-      "acr",
-    ],
-    maxTokenAge: "15m",
-  });
-  const scopes =
-    typeof payload.scope === "string" ? payload.scope.split(/\s+/) : [];
-  const authorizedClient =
-    payload.azp === oidcWebClientId || payload.client_id === oidcWebClientId;
-  const authenticationTime =
-    typeof payload.auth_time === "number" ? payload.auth_time * 1_000 : NaN;
-  if (
-    typeof payload.sub !== "string" ||
-    typeof payload.tenant_id !== "string" ||
-    payload.tenant_id !== input.expectedActor.tenantId ||
-    !scopes.includes(oidcReviewScope!) ||
-    !authorizedClient ||
-    payload.acr !== oidcReviewRequiredAcr ||
-    !Number.isFinite(authenticationTime) ||
-    authenticationTime > Date.now() + 30_000 ||
-    Date.now() - authenticationTime > 15 * 60_000
-  ) {
-    throw new Error("OIDC_IDENTITY_MISMATCH");
-  }
-  return { subject: payload.sub, tenantId: payload.tenant_id };
+  return verifyReviewerIdentity(
+    input.identityToken,
+    input.expectedActor.tenantId,
+    oidcJwks,
+    {
+      issuer: oidcIssuer!,
+      audience: oidcReviewAudience!,
+      scope: oidcReviewScope!,
+      acr: oidcReviewRequiredAcr!,
+      clientId: oidcWebClientId!,
+    },
+  );
 }
 
 async function resolveReviewer(
@@ -209,7 +191,7 @@ async function resolveReviewer(
     reviewer.id !== expectedActor.id ||
     reviewer.name !== expectedActor.name
   ) {
-    throw new Error("REVIEWER_MEMBERSHIP_MISMATCH");
+    throw new ReviewerAuthorizationError();
   }
   return { ...reviewer, tenantId: identity.tenantId };
 }
@@ -502,9 +484,9 @@ async function shutdown(signal: string) {
   process.exit(0);
 }
 
-export function startReviewer() {
+export function startReviewer(host = "0.0.0.0") {
   const port = Number(process.env.PORT ?? "3100");
-  server.listen(port, "0.0.0.0", () =>
+  server.listen(port, host, () =>
     logReviewEvent("review.service_started", { port, outcome: "SUCCESS" }),
   );
   process.on("SIGTERM", () => void shutdown("SIGTERM"));

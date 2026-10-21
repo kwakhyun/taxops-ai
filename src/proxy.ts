@@ -19,10 +19,16 @@ export function proxy(request: NextRequest) {
   const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-request-id", requestId);
+  // Always overwrite caller-supplied values; this is navigation context, not authorization.
+  requestHeaders.set(
+    "x-taxops-return-to",
+    request.nextUrl.pathname + request.nextUrl.search,
+  );
 
   const isBrowserPage =
     !request.nextUrl.pathname.startsWith("/api/") &&
-    request.nextUrl.pathname !== "/mcp";
+    request.nextUrl.pathname !== "/mcp" &&
+    request.nextUrl.pathname !== "/auth/status";
   if (
     process.env.AUTH_MODE === "oidc" &&
     isBrowserPage &&

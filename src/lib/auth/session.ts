@@ -12,7 +12,15 @@ import {
   type JWTPayload,
 } from "jose";
 import { resolveOidcPrincipal } from "@/lib/auth/principal";
-import { AuthenticationError } from "@/lib/auth/session-error";
+import {
+  AuthenticationError,
+  AuthenticationServiceError,
+  reviewerReauthenticationRequired,
+} from "@/lib/auth/session-error";
+import {
+  isInvalidIdentityToken,
+  providerVerificationError,
+} from "@/lib/auth/provider-error";
 import { resolveAuthMode } from "@/lib/auth/auth-mode";
 import { demoUsers } from "@/lib/domain/fixtures";
 import type { SessionUser } from "@/lib/domain/types";
@@ -37,9 +45,7 @@ export { AuthenticationError } from "@/lib/auth/session-error";
 function sessionKey() {
   const secret = process.env.SESSION_SECRET;
   if (!secret || secret.length < 32) {
-    throw new AuthenticationError(
-      "SESSION_SECRET must contain at least 32 characters",
-    );
+    throw new AuthenticationServiceError();
   }
   return new TextEncoder().encode(secret);
 }
@@ -68,30 +74,35 @@ async function openProviderIdentityToken(encrypted: string) {
     const token = new TextDecoder().decode(plaintext);
     if (token.split(".").length !== 3) throw new Error("invalid token");
     return token;
-  } catch {
-    throw new AuthenticationError("OIDC identity proof is invalid");
+  } catch (error) {
+    if (error instanceof AuthenticationServiceError) throw error;
+    throw reviewerReauthenticationRequired();
   }
 }
 
 export async function verifyProviderToken(token: string, audience: string) {
   const issuer = process.env.OIDC_ISSUER;
   const jwksUrl = process.env.OIDC_JWKS_URL;
-  if (!issuer) throw new AuthenticationError("OIDC issuer is not configured");
+  if (!issuer) throw new AuthenticationServiceError();
 
   const resolvedJwksUrl =
     jwksUrl ?? `${issuer.replace(/\/$/, "")}/.well-known/jwks.json`;
-  let jwks = jwksByUrl.get(resolvedJwksUrl);
-  if (!jwks) {
-    jwks = createRemoteJWKSet(new URL(resolvedJwksUrl));
-    jwksByUrl.set(resolvedJwksUrl, jwks);
-  }
-  const { payload } = await jwtVerify(
-    token,
-    jwks,
-    providerJwtValidationOptions(issuer, audience),
-  );
+  try {
+    let jwks = jwksByUrl.get(resolvedJwksUrl);
+    if (!jwks) {
+      jwks = createRemoteJWKSet(new URL(resolvedJwksUrl));
+      jwksByUrl.set(resolvedJwksUrl, jwks);
+    }
+    const { payload } = await jwtVerify(
+      token,
+      jwks,
+      providerJwtValidationOptions(issuer, audience),
+    );
 
-  return payload;
+    return payload;
+  } catch (error) {
+    throw providerVerificationError(error);
+  }
 }
 
 export async function issueOidcSession(input: {
@@ -155,7 +166,8 @@ export async function revokeOidcSession(token: string) {
       sessionKey(),
       webSessionValidationOptions,
     ));
-  } catch {
+  } catch (error) {
+    if (!isInvalidIdentityToken(error)) throw error;
     return;
   }
   await revokeWebSession(webSessionBinding(payload));
@@ -182,7 +194,7 @@ async function getOidcSession(): Promise<SessionUser> {
   const authorization = headerStore.get("authorization");
   if (authorization?.startsWith("Bearer ")) {
     const audience = process.env.OIDC_AUDIENCE;
-    if (!audience) throw new AuthenticationError("OIDC audience is missing");
+    if (!audience) throw new AuthenticationServiceError();
     return principalFromClaims(
       await verifyProviderToken(authorization.slice(7), audience),
     );
@@ -197,8 +209,8 @@ async function getOidcSession(): Promise<SessionUser> {
     const payload = await validateOidcSessionToken(session);
     return principalFromClaims(payload);
   } catch (error) {
-    if (error instanceof AuthenticationError) throw error;
-    throw new AuthenticationError("OIDC session is invalid or expired");
+    if (isInvalidIdentityToken(error)) throw new AuthenticationError();
+    throw error;
   }
 }
 
@@ -224,9 +236,7 @@ export async function getReviewerIdentityToken() {
   const cookieStore = await cookies();
   const encrypted = cookieStore.get(OIDC_REVIEW_ACCESS_COOKIE)?.value;
   if (!encrypted) {
-    throw new AuthenticationError(
-      "A fresh OIDC identity proof is required for reviewer decisions",
-    );
+    throw reviewerReauthenticationRequired();
   }
   return openProviderIdentityToken(encrypted);
 }

@@ -3,6 +3,8 @@ import "server-only";
 import { z } from "zod";
 import type { SessionUser } from "@/lib/domain/types";
 import { getReviewerIdentityToken } from "@/lib/auth/session";
+import { reviewerReauthenticationRequired } from "@/lib/auth/session-error";
+import { AuthorizationError } from "@/lib/auth/rbac";
 import {
   createReviewServiceEnvelope,
   createReviewServiceRequestMetadata,
@@ -131,6 +133,10 @@ async function invokeReviewService<T>(
     throw new ReviewServiceError("Reviewer service response is not authentic");
   }
   if (response.status === 409) return undefined;
+  // Only trust status codes after authenticating the encrypted response.
+  if (response.status === 401) throw reviewerReauthenticationRequired();
+  if (response.status === 403)
+    throw new AuthorizationError("검토 권한이 없습니다.");
   if (!response.ok) {
     throw new ReviewServiceError("Reviewer service rejected the request");
   }

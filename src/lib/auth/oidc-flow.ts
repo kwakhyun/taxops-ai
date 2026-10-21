@@ -3,7 +3,10 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { jwtVerify, SignJWT } from "jose";
 import { z } from "zod";
-import { AuthenticationError } from "@/lib/auth/session-error";
+import {
+  AuthenticationError,
+  AuthenticationServiceError,
+} from "@/lib/auth/session-error";
 import { safeReturnTo } from "@/lib/auth/return-to";
 import { fetchWithoutRedirect } from "@/lib/security/safe-fetch";
 
@@ -11,24 +14,27 @@ export const oidcTransactionCookie = "taxops_oidc_transaction";
 
 function required(name: string) {
   const value = process.env[name];
-  if (!value) throw new AuthenticationError(`${name} is not configured`);
+  if (!value) throw new AuthenticationServiceError();
   return value;
 }
 
 function signingKey() {
   const secret = required("SESSION_SECRET");
   if (secret.length < 32) {
-    throw new AuthenticationError(
-      "SESSION_SECRET must contain at least 32 characters",
-    );
+    throw new AuthenticationServiceError();
   }
   return new TextEncoder().encode(secret);
 }
 
 function configuredUrl(name: string) {
-  const url = new URL(required(name));
+  let url: URL;
+  try {
+    url = new URL(required(name));
+  } catch {
+    throw new AuthenticationServiceError();
+  }
   if (process.env.NODE_ENV === "production" && url.protocol !== "https:") {
-    throw new AuthenticationError(`${name} must use HTTPS`);
+    throw new AuthenticationServiceError();
   }
   return url;
 }
@@ -41,7 +47,13 @@ export function oidcRedirectUri() {
   return new URL("/api/auth/callback", appBaseUrl()).toString();
 }
 
-export async function createAuthorizationRequest(returnTo: string | null) {
+export async function createAuthorizationRequest(
+  returnTo: string | null,
+  options: {
+    reauthenticate?: boolean;
+    expectedUser?: { id: string; tenantId: string };
+  } = {},
+) {
   const state = randomBytes(32).toString("base64url");
   const nonce = randomBytes(32).toString("base64url");
   const verifier = randomBytes(48).toString("base64url");
@@ -51,6 +63,8 @@ export async function createAuthorizationRequest(returnTo: string | null) {
     nonce,
     verifier,
     returnTo: safeReturnTo(returnTo),
+    reauthenticate: options.reauthenticate ?? false,
+    expectedUser: options.expectedUser,
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setIssuer("taxops-ai")
@@ -69,14 +83,14 @@ export async function createAuthorizationRequest(returnTo: string | null) {
     nonce,
     code_challenge: challenge,
     code_challenge_method: "S256",
+    max_age: "0",
+    prompt: "login",
   };
   const reviewAudience = required("OIDC_REVIEW_AUDIENCE");
   const reviewResourceParameter =
     process.env.OIDC_REVIEW_RESOURCE_PARAMETER ?? "resource";
   if (!new Set(["resource", "audience"]).has(reviewResourceParameter)) {
-    throw new AuthenticationError(
-      "OIDC_REVIEW_RESOURCE_PARAMETER must be resource or audience",
-    );
+    throw new AuthenticationServiceError();
   }
   authorizationParameters[reviewResourceParameter] = reviewAudience;
   if (process.env.OIDC_REVIEW_REQUIRED_ACR) {
@@ -93,6 +107,9 @@ const transactionSchema = z.object({
   nonce: z.string().min(32),
   verifier: z.string().min(43),
   returnTo: z.string().startsWith("/"),
+  iat: z.number(),
+  reauthenticate: z.boolean().default(false),
+  expectedUser: z.object({ id: z.string(), tenantId: z.string() }).optional(),
 });
 
 export async function consumeAuthorizationTransaction(
@@ -111,7 +128,11 @@ export async function consumeAuthorizationTransaction(
     }
     return transaction;
   } catch (error) {
-    if (error instanceof AuthenticationError) throw error;
+    if (
+      error instanceof AuthenticationError ||
+      error instanceof AuthenticationServiceError
+    )
+      throw error;
     throw new AuthenticationError("OIDC transaction is invalid or expired");
   }
 }
@@ -128,25 +149,35 @@ export async function exchangeAuthorizationCode(
 ) {
   const clientId = required("OIDC_CLIENT_ID");
   const clientSecret = required("OIDC_CLIENT_SECRET");
-  const response = await fetchWithoutRedirect(configuredUrl("OIDC_TOKEN_URL"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
-    },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: oidcRedirectUri(),
-      client_id: clientId,
-      code_verifier: verifier,
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
+  let response: Response;
+  try {
+    response = await fetchWithoutRedirect(configuredUrl("OIDC_TOKEN_URL"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: oidcRedirectUri(),
+        client_id: clientId,
+        code_verifier: verifier,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    throw new AuthenticationServiceError();
+  }
+  if (response.status >= 500) throw new AuthenticationServiceError();
   if (!response.ok) {
     throw new AuthenticationError("OIDC authorization code exchange failed");
   }
-  return tokenResponseSchema.parse(await response.json());
+  try {
+    return tokenResponseSchema.parse(await response.json());
+  } catch {
+    throw new AuthenticationServiceError();
+  }
 }
 
 export function oidcClientId() {

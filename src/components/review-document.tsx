@@ -15,23 +15,28 @@ import {
   type ReviewDecision,
 } from "@/components/review-workspace-model";
 import type { ReviewRequest } from "@/lib/workpapers/artifact";
+import { AuthRecovery } from "@/components/auth-recovery";
 
 export function ReviewDocument({
+  ready,
   selected,
   reviewerName,
   decision,
   acting,
   note,
   message,
+  recoveryUrl,
   onNoteChange,
   onDecide,
 }: {
+  ready: boolean;
   selected: ReviewRequest;
   reviewerName: string;
   decision?: ReviewDecision;
   acting?: "APPROVED" | "REJECTED";
   note: string;
   message: string;
+  recoveryUrl?: string;
   onNoteChange: (value: string) => void;
   onDecide: (decision: "APPROVED" | "REJECTED") => void;
 }) {
@@ -160,14 +165,17 @@ export function ReviewDocument({
             minLength={4}
             maxLength={800}
             rows={3}
-            disabled={Boolean(acting) || selected.stale}
+            disabled={!ready || Boolean(acting) || selected.stale}
           />
           <small>{note.length}/800</small>
           <small id="review-note-hint" className="review-note-hint">
-            승인 또는 반려하려면 검토 의견을 4자 이상 입력해 주세요.
+            {ready
+              ? "승인 또는 반려하려면 검토 의견을 4자 이상 입력해 주세요."
+              : "검토 화면을 준비하고 있습니다."}
           </small>
         </label>
       ) : null}
+      <AuthRecovery href={recoveryUrl} />
       <div className="review-actions">
         <div>
           <span className="reviewer-avatar">{reviewerName.slice(0, 1)}</span>
@@ -183,7 +191,10 @@ export function ReviewDocument({
               type="button"
               onClick={() => onDecide("REJECTED")}
               disabled={
-                Boolean(acting) || selected.stale || note.trim().length < 4
+                !ready ||
+                Boolean(acting) ||
+                selected.stale ||
+                note.trim().length < 4
               }
             >
               {acting === "REJECTED" ? (
@@ -198,7 +209,10 @@ export function ReviewDocument({
               type="button"
               onClick={() => onDecide("APPROVED")}
               disabled={
-                Boolean(acting) || selected.stale || note.trim().length < 4
+                !ready ||
+                Boolean(acting) ||
+                selected.stale ||
+                note.trim().length < 4
               }
             >
               {acting === "APPROVED" ? (

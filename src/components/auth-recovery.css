@@ -1,0 +1,17 @@
+.auth-recovery {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  margin: 12px 0;
+  border: 1px solid var(--ink-200);
+  border-radius: var(--radius-sm);
+  background: var(--ink-50);
+}
+.auth-recovery p {
+  margin: 0;
+  line-height: 1.6;
+}
+.auth-recovery a {
+  justify-self: start;
+  min-height: 44px;
+}

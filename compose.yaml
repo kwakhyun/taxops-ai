@@ -115,7 +115,7 @@ services:
       target: reviewer
     environment:
       REVIEW_DATABASE_URL: postgres://taxops_reviewer:taxops_reviewer_dev_only@db:5432/taxops
-      REVIEW_SERVICE_SHARED_SECRET: ${REVIEW_SERVICE_SHARED_SECRET:-dGF4b3BzLXJldmlldy1zZXJ2aWNlLWRldi1vbmx5LWtleSE}
+      REVIEW_SERVICE_SHARED_SECRET: &review-service-secret ${REVIEW_SERVICE_SHARED_SECRET:-dGF4b3BzLXJldmlldy1zZXJ2aWNlLWRldi1vbmx5LWtleSE}
       OIDC_ISSUER: ${OIDC_ISSUER:-https://identity.example.invalid}
       OIDC_JWKS_URL: ${OIDC_JWKS_URL:-https://identity.example.invalid/.well-known/jwks.json}
       OIDC_REVIEW_AUDIENCE: ${OIDC_REVIEW_AUDIENCE:-taxops-review-api}
@@ -151,7 +151,7 @@ services:
       REVIEW_SERVICE_URL: http://reviewer:3100
       REVIEW_SERVICE_ALLOWED_HOST: reviewer
       REVIEW_SERVICE_ALLOW_ENCRYPTED_HTTP: "true"
-      REVIEW_SERVICE_SHARED_SECRET: ${REVIEW_SERVICE_SHARED_SECRET:-dGF4b3BzLXJldy1zZXJ2aWNlLWRldi1vbmx5LWtleSE}
+      REVIEW_SERVICE_SHARED_SECRET: *review-service-secret
       AUTH_MODE: oidc
       APP_BASE_URL: ${APP_BASE_URL:-http://127.0.0.1:3000}
       OIDC_ISSUER: ${OIDC_ISSUER:-https://identity.example.invalid}

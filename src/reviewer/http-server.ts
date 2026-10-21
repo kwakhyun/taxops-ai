@@ -1,5 +1,10 @@
 import { createServer } from "node:http";
 import {
+  AuthenticationError,
+  AuthenticationServiceError,
+} from "../lib/auth/session-error.ts";
+import { ReviewerAuthorizationError } from "./identity.ts";
+import {
   openReviewServiceEnvelope,
   reviewServiceContext,
 } from "../lib/review/service-crypto.ts";
@@ -102,6 +107,18 @@ export function createReviewerHttpServer(input: {
       });
       writeEncryptedResponse(target, 200, result, metadata, input.sharedSecret);
     } catch (error) {
+      const status =
+        error instanceof AuthenticationError ||
+        error instanceof ReviewerAuthorizationError ||
+        error instanceof AuthenticationServiceError
+          ? error.status
+          : 400;
+      const code =
+        error instanceof AuthenticationError ||
+        error instanceof ReviewerAuthorizationError ||
+        error instanceof AuthenticationServiceError
+          ? error.code
+          : "REQUEST_REJECTED";
       logReviewEvent("review.decision_failed", {
         errorCode: error instanceof Error ? error.name : "UNKNOWN",
         outcome: "FAILED",
@@ -109,8 +126,8 @@ export function createReviewerHttpServer(input: {
       if (metadata) {
         writeEncryptedResponse(
           target,
-          400,
-          { ok: false, code: "REQUEST_REJECTED" },
+          status,
+          { ok: false, code },
           metadata,
           input.sharedSecret,
         );

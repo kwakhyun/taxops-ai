@@ -96,13 +96,19 @@ AI 자료 첨부, 통합 검색과 근거 검토는 공통 네이티브 `Dialog`
 핵심 데이터 모델은 19개 테이블과 8개 enum으로 구성됩니다. 테이블은 `tenants`, `users`, `memberships`, `web_sessions`, `clients`, `matters`, `documents`, `document_chunks`, `jobs`, `outbox_events`, `rate_limit_buckets`, `prompt_versions`, `agent_runs`, `retrieval_events`, `tool_calls`, `workpapers`, `workpaper_versions`, `approvals`, `audit_events`입니다. enum은 `membership_role`, `matter_status`, `risk_level`, `document_status`, `job_status`, `workflow_status`, `approval_status`, `audit_outcome`입니다.
 
 - 모든 고객 데이터는 조직을 식별하는 `tenant_id`를 포함합니다.
-- 브라우저 세션의 `jti`는 `web_sessions`에 기록하며 로그아웃 시 즉시 폐기합니다.
+- 브라우저 세션의 `jti`는 `web_sessions`에 기록하며 로그아웃 시 폐기합니다. DB 장애로 폐기를 확인하지 못해도 브라우저 쿠키는 삭제하고, 미완료 안내와 운영 오류 로그를 남깁니다.
 - 중요한 관계는 조직 ID를 포함한 복합 외래 키로 연결합니다.
 - RLS는 요청별 `app.tenant_id` 설정을 기준으로 읽기와 쓰기를 제한합니다.
 - 감사 이벤트는 이전 해시를 포함하고 애플리케이션에서 수정·삭제할 수 없습니다. DB 검증기가 조회 제한과 무관하게 해당 조직의 전체 체인을 재계산합니다.
 - 업로드 작업은 조직 범위 멱등성 키로 중복 생성을 막습니다.
 
 ## 고장 처리
+
+- 인증 만료: 잘못되거나 만료된 Bearer 토큰은 `401`, 권한 부족은 `403`, 인증기관 연결 장애는 `503`으로 구분합니다. 검토자 인증 만료는 `REVIEW_REAUTH_REQUIRED`로 전달합니다.
+- 검토자 재인증: 웹 세션은 최대 8시간, 검토자 신원 증명은 최대 15분 유효합니다. 새 탭에서 `prompt=login`, `max_age=0`으로 다시 인증하며 `auth_time`을 검증합니다. 기존 웹 세션이 유효하면 동일 사용자와 조직인지도 대조합니다. 원래 탭의 입력 내용은 유지하고, 승인이나 반려는 자동 재실행하지 않습니다.
+- 로그인 취소와 실패: 인증 거래의 서명과 `state`를 확인한 뒤 한국어 안내 화면으로 이동합니다. 성공과 실패 모두 임시 거래 쿠키를 삭제합니다. `/auth/status`는 공개 안내 화면이며, 업무 화면은 `(workspace)` 레이아웃과 각 서버 API에서 계속 인증을 검사합니다.
+- 로그아웃: 웹 세션, 검토자 인증, 데모 사용자, 임시 거래 쿠키를 삭제한 뒤 안내 화면에 머뭅니다. 조직 인증기관의 전체 SSO 세션 종료는 수행하지 않습니다.
+- 서버 오류: 공통 오류 처리에서 요청 ID, 오류 코드, 허용된 오류 유형을 기록합니다. 원본 예외 메시지, 스택, 토큰, DB 연결 문자열은 응답이나 로그에 포함하지 않습니다.
 
 - AI Gateway 오류: 재시도 제한 후 사용자에게 추적 가능한 오류를 반환하며, 근거 없는 대체 결론을 만들지 않습니다.
 - 검색 결과 없음: 답변을 보류하고 필요한 자료를 안내합니다.

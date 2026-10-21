@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog } from "@/components/dialog";
 import type { EvidenceReviewPreview } from "@/lib/domain/types";
 import { jurisdictionLabel, sourceTypeLabel } from "@/lib/ui/labels";
+import { AuthRecovery } from "@/components/auth-recovery";
+import { authRecoveryUrl } from "@/lib/auth/recovery";
 
 interface ApiPayload {
   data?: EvidenceReviewPreview;
@@ -19,6 +21,7 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
   const [acting, setActing] = useState<"APPROVED" | "REJECTED">();
   const [preview, setPreview] = useState<EvidenceReviewPreview>();
   const [error, setError] = useState("");
+  const [recoveryUrl, setRecoveryUrl] = useState<string>();
   const previewRequest = useRef<AbortController | null>(null);
   const decisionLock = useRef(false);
 
@@ -43,11 +46,19 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
     setLoading(true);
     setPreview(undefined);
     setError("");
+    setRecoveryUrl(undefined);
     try {
       const response = await fetch(`/api/v1/documents/${documentId}/evidence`, {
         signal: controller.signal,
       });
       const payload = (await response.json()) as ApiPayload;
+      if (controller.signal.aborted) return;
+      setRecoveryUrl(
+        authRecoveryUrl(
+          response.status,
+          window.location.pathname + window.location.search,
+        ),
+      );
       if (!response.ok || !payload.data) {
         throw new Error(
           payload.error?.message ?? "근거를 불러오지 못했습니다.",
@@ -76,9 +87,11 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
     decisionLock.current = true;
     setActing(decision);
     setError("");
+    setRecoveryUrl(undefined);
     try {
       const response = await fetch(`/api/v1/documents/${documentId}/evidence`, {
         method: "PATCH",
+        signal: AbortSignal.timeout(30_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           decision,
@@ -87,13 +100,23 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
         }),
       });
       const payload = (await response.json()) as ApiPayload;
+      setRecoveryUrl(
+        authRecoveryUrl(
+          response.status,
+          window.location.pathname + window.location.search,
+        ),
+      );
       if (!response.ok) {
         throw new Error(payload.error?.message ?? "근거 검토에 실패했습니다.");
       }
       setOpen(false);
       router.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "근거 검토 실패");
+      setError(
+        cause instanceof Error && /[가-힣]/.test(cause.message)
+          ? cause.message
+          : "근거 검토에 실패했습니다. 다시 시도해 주세요.",
+      );
     } finally {
       decisionLock.current = false;
       setActing(undefined);
@@ -231,6 +254,7 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
             {error}
           </p>
         ) : null}
+        <AuthRecovery href={recoveryUrl} />
         {error && !preview && !loading ? (
           <button
             type="button"

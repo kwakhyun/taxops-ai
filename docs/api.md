@@ -1,6 +1,6 @@
 # API와 MCP 계약
 
-모든 REST 응답은 `x-request-id`를 돌려주며 오류는 `{ error: { code, message }, meta: { requestId } }` 형태를 사용합니다. 운영 환경의 브라우저는 OIDC Authorization Code + PKCE로 서명된 HttpOnly 세션을 받습니다. 세션 `jti`는 DB 활성 상태와 매 요청 대조하며 로그아웃 시 즉시 폐기합니다. API와 MCP 클라이언트는 OIDC Bearer 토큰을 사용합니다.
+모든 REST 응답은 `x-request-id`를 돌려주며 오류는 `{ error: { code, message }, meta: { requestId } }` 형태를 사용합니다. 운영 환경의 브라우저는 OIDC Authorization Code + PKCE로 서명된 HttpOnly 세션을 받습니다. 세션 `jti`는 DB 활성 상태와 매 요청 대조하며 로그아웃 시 폐기합니다. DB 장애로 폐기를 확인하지 못하면 브라우저 쿠키를 삭제하고 미완료 안내와 운영 오류 로그를 남깁니다. API와 MCP 클라이언트는 OIDC Bearer 토큰을 사용합니다.
 
 토큰의 역할과 조직 소속 클레임을 그대로 신뢰하지 않고 DB에서 다시 확인합니다. 쿠키 기반 쓰기 요청은 등록된 `APP_BASE_URL` Origin만 허용합니다.
 

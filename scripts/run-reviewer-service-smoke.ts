@@ -482,18 +482,27 @@ try {
   );
 
   const invalidIdentityCases = [
-    await signAccessToken(privateKey, { audience: "wrong-audience" }),
-    await signAccessToken(privateKey, { scope: "openid profile" }),
-    await signAccessToken(privateKey, { acr: "urn:taxops:acr:password" }),
-    await signAccessToken(privateKey, {
-      authTime: Math.floor(Date.now() / 1_000) - 901,
-    }),
-    await signAccessToken(privateKey, { client: "attacker-client" }),
-    await signAccessToken(privateKey, {
-      tenantId: "00000000-0000-4000-8000-000000000999",
-    }),
-  ];
-  for (const identityToken of invalidIdentityCases) {
+    [await signAccessToken(privateKey, { audience: "wrong-audience" }), 401],
+    [await signAccessToken(privateKey, { scope: "openid profile" }), 403],
+    [
+      await signAccessToken(privateKey, { acr: "urn:taxops:acr:password" }),
+      403,
+    ],
+    [
+      await signAccessToken(privateKey, {
+        authTime: Math.floor(Date.now() / 1_000) - 901,
+      }),
+      401,
+    ],
+    [await signAccessToken(privateKey, { client: "attacker-client" }), 403],
+    [
+      await signAccessToken(privateKey, {
+        tenantId: "00000000-0000-4000-8000-000000000999",
+      }),
+      403,
+    ],
+  ] as const;
+  for (const [identityToken, expectedStatus] of invalidIdentityCases) {
     assert.equal(
       (
         await invoke("/v1/tokens/workpapers", {
@@ -501,7 +510,7 @@ try {
           identityToken,
         })
       ).status,
-      400,
+      expectedStatus,
     );
   }
   assert.equal(
@@ -514,7 +523,7 @@ try {
         expectedActor: { tenantId, id: analystId, name: "곽현" },
       })
     ).status,
-    400,
+    403,
   );
   assert.equal(
     (

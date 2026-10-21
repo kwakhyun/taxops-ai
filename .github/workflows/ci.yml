@@ -68,6 +68,28 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  auth-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify actual OIDC login, MFA, DB sessions and reviewer recovery
+        run: npm run test:auth-e2e
+      - name: Upload authentication verification evidence without credentials
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: auth-integration-report
+          path: artifacts/auth-test/*.json
+          retention-days: 7
+          if-no-files-found: ignore
+
   terraform-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10

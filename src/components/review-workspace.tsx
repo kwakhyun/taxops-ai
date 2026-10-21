@@ -29,17 +29,19 @@ export function ReviewWorkspace({
     <div className="review-layout">
       <ReviewRequestList
         requests={workspace.currentRequests}
-        disabled={Boolean(workspace.acting)}
+        disabled={!workspace.ready || Boolean(workspace.acting)}
         selectedId={workspace.selected.targetId}
         onSelect={workspace.selectRequest}
       />
       <ReviewDocument
+        ready={workspace.ready}
         selected={workspace.selected}
         reviewerName={reviewerName}
         decision={workspace.decision}
         acting={workspace.acting}
         note={workspace.note}
         message={workspace.message}
+        recoveryUrl={workspace.recoveryUrl}
         onNoteChange={workspace.setNote}
         onDecide={(decision) => void workspace.decide(decision)}
       />

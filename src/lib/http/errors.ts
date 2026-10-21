@@ -1,8 +1,8 @@
 import { ZodError } from "zod";
-import { AuthenticationError } from "@/lib/auth/session";
+import { AuthenticationError } from "@/lib/auth/session-error";
 import { AuthorizationError } from "@/lib/auth/rbac";
 import { FileValidationError } from "@/lib/files/validation";
-import { writeLog } from "@/lib/observability/logger";
+import { logServerError, writeLog } from "@/lib/observability/logger";
 
 export function apiError(error: unknown, requestId?: string) {
   if (error instanceof ZodError) {
@@ -31,17 +31,34 @@ export function apiError(error: unknown, requestId?: string) {
     writeLog("warn", "security.access_denied", {
       requestId,
       statusCode: error.status,
-      errorCode: error.name,
+      errorCode: error.code,
       outcome: "DENIED",
     });
     return Response.json(
       {
-        error: { code: error.name, message: error.message },
+        error: {
+          code: error.code,
+          message:
+            error instanceof AuthenticationError
+              ? error.code === "REVIEW_REAUTH_REQUIRED"
+                ? error.message
+                : "인증 정보가 유효하지 않거나 만료되었습니다. 다시 로그인해 주세요."
+              : "이 작업을 처리할 권한이 없습니다. 담당 관리자에게 문의해 주세요.",
+        },
         meta: requestId ? { requestId } : undefined,
       },
       {
         status: error.status,
-        headers: requestId ? { "x-request-id": requestId } : undefined,
+        headers: {
+          ...(requestId ? { "x-request-id": requestId } : {}),
+          "Cache-Control": "no-store",
+          ...(error.status === 401
+            ? {
+                "WWW-Authenticate":
+                  'Bearer realm="taxops-api", error="invalid_token"',
+              }
+            : {}),
+        },
       },
     );
   }
@@ -65,9 +82,16 @@ export function apiError(error: unknown, requestId?: string) {
     "code" in error &&
     typeof error.code === "string"
   ) {
+    if (error.status >= 500) logServerError(error, requestId, error.code);
     return Response.json(
       {
-        error: { code: error.code, message: error.message },
+        error: {
+          code: error.code,
+          message:
+            error.status >= 500
+              ? "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."
+              : error.message,
+        },
         meta: requestId ? { requestId } : undefined,
       },
       {
@@ -77,6 +101,7 @@ export function apiError(error: unknown, requestId?: string) {
     );
   }
 
+  logServerError(error, requestId);
   return Response.json(
     {
       error: { code: "INTERNAL_ERROR", message: "요청을 처리하지 못했습니다." },

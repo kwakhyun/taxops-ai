@@ -1,0 +1,27 @@
+.auth-status-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.auth-status-card {
+  width: min(100%, 520px);
+  padding: clamp(24px, 5vw, 40px);
+  display: grid;
+  gap: 20px;
+}
+.auth-status-card h1 {
+  margin: 0;
+  font-size: clamp(24px, 5vw, 32px);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.auth-status-card p {
+  margin: 0;
+  line-height: 1.8;
+  color: var(--ink-700);
+}
+.auth-status-card .button {
+  justify-self: start;
+  min-height: 44px;
+}

@@ -12,7 +12,7 @@ import {
 import { PageHeading } from "@/components/page-heading";
 import { can } from "@/lib/auth/rbac";
 import { getSessionUser } from "@/lib/auth/session";
-import report from "../../../artifacts/evaluation-report.json";
+import report from "../../../../artifacts/evaluation-report.json";
 
 export const metadata: Metadata = { title: "AI 품질 평가" };
 

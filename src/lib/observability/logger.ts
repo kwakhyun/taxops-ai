@@ -22,6 +22,7 @@ const allowedKeys = new Set([
   "tokens",
   "estimatedCostKrw",
   "errorCode",
+  "errorType",
 ]);
 
 export function writeLog(
@@ -47,4 +48,37 @@ export function writeLog(
 
 export function createTraceId(prefix = "tr") {
   return `${prefix}_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+}
+
+export function logServerError(
+  error: unknown,
+  requestId?: string,
+  code = "INTERNAL_ERROR",
+  event = "http.request_failed",
+) {
+  const safeTypes = new Set([
+    "Error",
+    "TypeError",
+    "RangeError",
+    "PostgresError",
+    "TimeoutError",
+    "AbortError",
+    "AuthenticationServiceError",
+  ]);
+  writeLog("error", event, {
+    requestId,
+    statusCode:
+      typeof error === "object" &&
+      error &&
+      "status" in error &&
+      typeof error.status === "number"
+        ? error.status
+        : 500,
+    errorCode: /^[A-Z0-9_]{1,64}$/.test(code) ? code : "INTERNAL_ERROR",
+    errorType:
+      error instanceof Error && safeTypes.has(error.name)
+        ? error.name
+        : "UnknownError",
+    outcome: "FAILED",
+  });
 }

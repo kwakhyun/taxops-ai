@@ -1,10 +1,22 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ReviewDecision } from "@/components/review-workspace-model";
 import type { ReviewRequest } from "@/lib/workpapers/artifact";
+import { authRecoveryUrl } from "@/lib/auth/recovery";
+
+// Hydration itself switches from the server snapshot to the client snapshot.
+// No mutable shared state or browser event subscription is needed.
+const subscribeToReadiness = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
 
 export function useReviewWorkspace(requests: ReviewRequest[]) {
+  const ready = useSyncExternalStore(
+    subscribeToReadiness,
+    clientReady,
+    serverReady,
+  );
   const [selectedId, setSelectedId] = useState(requests[0]?.targetId);
   const [acting, setActing] = useState<"APPROVED" | "REJECTED">();
   const [decisions, setDecisions] = useState<Record<string, ReviewDecision>>(
@@ -12,6 +24,7 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
   );
   const decisionLock = useRef(false);
   const [note, setNote] = useState("");
+  const [recoveryUrl, setRecoveryUrl] = useState<string>();
   const [message, setMessage] = useState(
     "현재 버전과 출처 이력을 시스템이 확인한 뒤 검토 결과를 기록합니다.",
   );
@@ -33,6 +46,7 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
     if (decisionLock.current) return;
     setSelectedId(targetId);
     setNote("");
+    setRecoveryUrl(undefined);
     setMessage(
       "현재 버전과 출처 이력을 시스템이 확인한 뒤 검토 결과를 기록합니다.",
     );
@@ -48,8 +62,18 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
     decisionLock.current = true;
     setActing(nextDecision);
     setMessage("");
+    setRecoveryUrl(undefined);
     try {
-      const tokenResponse = await fetch("/api/v1/reviews/" + selected.targetId);
+      const tokenResponse = await fetch(
+        "/api/v1/reviews/" + selected.targetId,
+        { signal: AbortSignal.timeout(30_000) },
+      );
+      setRecoveryUrl(
+        authRecoveryUrl(
+          tokenResponse.status,
+          window.location.pathname + window.location.search,
+        ),
+      );
       const tokenPayload = (await tokenResponse.json()) as {
         data?: {
           tokens?: Record<"APPROVED" | "REJECTED", string>;
@@ -72,6 +96,7 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
       }
       const response = await fetch("/api/v1/reviews/" + selected.targetId, {
         method: "POST",
+        signal: AbortSignal.timeout(30_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           decision: nextDecision,
@@ -80,6 +105,12 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
           artifactHash: tokenPayload.data.artifactHash,
         }),
       });
+      setRecoveryUrl(
+        authRecoveryUrl(
+          response.status,
+          window.location.pathname + window.location.search,
+        ),
+      );
       const payload = (await response.json()) as {
         data?: ReviewDecision;
         error?: { message: string };
@@ -95,7 +126,7 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
       );
     } catch (cause) {
       setMessage(
-        cause instanceof Error
+        cause instanceof Error && /[가-힣]/.test(cause.message)
           ? cause.message
           : "검토 결정을 저장하지 못했습니다.",
       );
@@ -106,12 +137,14 @@ export function useReviewWorkspace(requests: ReviewRequest[]) {
   }
 
   return {
+    ready,
     currentRequests,
     selected,
     acting,
     decision,
     note,
     message,
+    recoveryUrl,
     setNote,
     selectRequest,
     decide,
