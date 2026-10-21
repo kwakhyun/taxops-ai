@@ -41,6 +41,8 @@ RUN npm ci --omit=dev \
   && useradd --system --uid 1001 --gid nodejs reviewer
 COPY --chown=reviewer:nodejs src/reviewer ./src/reviewer
 COPY --chown=reviewer:nodejs src/lib/auth/token-policy.ts ./src/lib/auth/token-policy.ts
+COPY --chown=reviewer:nodejs src/lib/auth/session-error.ts ./src/lib/auth/session-error.ts
+COPY --chown=reviewer:nodejs src/lib/auth/provider-error.ts ./src/lib/auth/provider-error.ts
 COPY --chown=reviewer:nodejs src/lib/documents/evidence-manifest.ts ./src/lib/documents/evidence-manifest.ts
 COPY --chown=reviewer:nodejs src/lib/review/service-crypto.ts ./src/lib/review/service-crypto.ts
 COPY --chown=reviewer:nodejs src/lib/security/approval-token.ts ./src/lib/security/approval-token.ts

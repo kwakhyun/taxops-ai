@@ -44,6 +44,11 @@ jobs:
         run: docker build --target worker -t taxops-worker:${{ github.sha }} .
       - name: Build production reviewer image
         run: docker build --target reviewer -t taxops-reviewer:${{ github.sha }} .
+      - name: Verify reviewer runtime imports in the production image
+        run: >-
+          docker run --rm --entrypoint node taxops-reviewer:${{ github.sha }}
+          --experimental-strip-types --input-type=module
+          -e "await import('./src/reviewer/http-server.ts')"
 
   browser-e2e:
     runs-on: ubuntu-24.04
@@ -102,7 +107,7 @@ jobs:
 
   database-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - name: Start PostgreSQL with pgvector

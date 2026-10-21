@@ -3,7 +3,8 @@
   "compilerOptions": {
     "lib": ["ES2024"],
     "types": ["node"],
-    "noEmit": true
+    "noEmit": true,
+    "erasableSyntaxOnly": true
   },
   "include": [
     "src/reviewer/**/*.ts",

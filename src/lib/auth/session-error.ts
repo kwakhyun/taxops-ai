@@ -1,15 +1,17 @@
 export class AuthenticationError extends Error {
   readonly status = 401;
+  readonly code: "AUTH_REQUIRED" | "INVALID_TOKEN" | "REVIEW_REAUTH_REQUIRED";
 
   constructor(
     message = "로그인이 필요합니다. 다시 로그인해 주세요.",
-    readonly code:
+    code:
       | "AUTH_REQUIRED"
       | "INVALID_TOKEN"
       | "REVIEW_REAUTH_REQUIRED" = "AUTH_REQUIRED",
   ) {
     super(message);
     this.name = "AuthenticationError";
+    this.code = code;
   }
 }
 
