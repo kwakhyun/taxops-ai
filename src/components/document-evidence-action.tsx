@@ -8,6 +8,7 @@ import type { EvidenceReviewPreview } from "@/lib/domain/types";
 import { jurisdictionLabel, sourceTypeLabel } from "@/lib/ui/labels";
 import { AuthRecovery } from "@/components/auth-recovery";
 import { authRecoveryUrl } from "@/lib/auth/recovery";
+import { useClientReady } from "@/components/use-client-ready";
 
 interface ApiPayload {
   data?: EvidenceReviewPreview;
@@ -15,6 +16,7 @@ interface ApiPayload {
 }
 
 export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
+  const ready = useClientReady();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -127,6 +129,7 @@ export function DocumentEvidenceAction({ documentId }: { documentId: string }) {
     <>
       <button
         type="button"
+        disabled={!ready}
         className="button button-secondary button-compact evidence-review-button"
         onClick={() => void inspect()}
       >

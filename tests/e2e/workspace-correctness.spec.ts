@@ -126,8 +126,71 @@ test("server pagination keeps filters and exports the whole audit search", async
   expect((await csv.text()).split("\n").length).toBeGreaterThan(4);
   await page.request.post("/api/auth/demo", { data: { user: "admin" } });
   await page.goto("/audit");
+  const searchResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === "/api/v1/audit" &&
+      url.searchParams.get("from") === "2099-01-01"
+    );
+  });
   await page.getByLabel("시작일").fill("2099-01-01");
+  expect((await searchResponse).ok()).toBe(true);
   await expect(
     page.getByText("조건에 맞는 감사 기록이 없습니다."),
   ).toBeVisible();
 });
+
+for (const screen of ["audit", "evidence"] as const) {
+  test(`${screen} controls wait for hydration before accepting input`, async ({
+    page,
+  }) => {
+    await page.request.post("/api/auth/demo", {
+      data: { user: screen === "audit" ? "admin" : "reviewer" },
+    });
+    let releaseScripts!: () => void;
+    const scriptsReady = new Promise<void>((resolve) => {
+      releaseScripts = resolve;
+    });
+    await page.route(
+      (url) =>
+        url.pathname.startsWith("/_next/") && url.pathname.endsWith(".js"),
+      async (route) => {
+        await scriptsReady;
+        await route.continue();
+      },
+    );
+    try {
+      await page.goto(
+        screen === "audit" ? "/audit" : "/documents?matter=vat-2025-q4",
+        {
+          waitUntil: "commit",
+        },
+      );
+      const control =
+        screen === "audit"
+          ? page.getByLabel("시작일")
+          : page.getByRole("button", { name: "검색 근거 검토", exact: true });
+      await expect(control).toBeVisible();
+      await expect(control).toBeDisabled();
+      releaseScripts();
+      await expect(control).toBeEnabled();
+      if (screen === "audit") {
+        await control.fill("2099-01-01");
+        await expect(
+          page.getByText("조건에 맞는 감사 기록이 없습니다."),
+        ).toBeVisible();
+        await expect(control).toHaveValue("2099-01-01");
+      } else {
+        await control.click();
+        await expect(
+          page.getByRole("dialog").getByText("원본 파일 해시(SHA-256)"),
+        ).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: "검색 근거로 승인", exact: true }),
+        ).toBeEnabled();
+      }
+    } finally {
+      releaseScripts();
+    }
+  });
+}

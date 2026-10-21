@@ -1,22 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useClientReady } from "@/components/use-client-ready";
 import type { ReviewDecision } from "@/components/review-workspace-model";
 import type { ReviewRequest } from "@/lib/workpapers/artifact";
 import { authRecoveryUrl } from "@/lib/auth/recovery";
 
-// Hydration itself switches from the server snapshot to the client snapshot.
-// No mutable shared state or browser event subscription is needed.
-const subscribeToReadiness = () => () => {};
-const clientReady = () => true;
-const serverReady = () => false;
-
 export function useReviewWorkspace(requests: ReviewRequest[]) {
-  const ready = useSyncExternalStore(
-    subscribeToReadiness,
-    clientReady,
-    serverReady,
-  );
+  const ready = useClientReady();
   const [selectedId, setSelectedId] = useState(requests[0]?.targetId);
   const [acting, setActing] = useState<"APPROVED" | "REJECTED">();
   const [decisions, setDecisions] = useState<Record<string, ReviewDecision>>(

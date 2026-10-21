@@ -4,6 +4,7 @@ import { CheckCircle2, Download, Search, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { TableViewport } from "@/components/table-viewport";
 import { usePagedQuery } from "@/components/use-paged-query";
+import { useClientReady } from "@/components/use-client-ready";
 import { Pagination } from "@/components/pagination";
 import type { PageResult } from "@/lib/contracts/listing";
 import type { AuditEvent } from "@/lib/domain/types";
@@ -18,6 +19,7 @@ const filters = [
 ] as const;
 
 export function AuditTable({ initial }: { initial: PageResult<AuditEvent> }) {
+  const ready = useClientReady();
   const [query, setQuery] = useState("");
   const [outcome, setOutcome] = useState<AuditEvent["outcome"] | "ALL">("ALL");
   const [from, setFrom] = useState("");
@@ -67,6 +69,7 @@ export function AuditTable({ initial }: { initial: PageResult<AuditEvent> }) {
           <span className="sr-only">감사 로그 검색</span>
           <input
             value={query}
+            disabled={!ready}
             maxLength={200}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -80,6 +83,7 @@ export function AuditTable({ initial }: { initial: PageResult<AuditEvent> }) {
             <button
               key={filter.value}
               type="button"
+              disabled={!ready}
               className={`filter-chip ${outcome === filter.value ? "filter-chip-active" : ""}`}
               aria-pressed={outcome === filter.value}
               onClick={() => {
@@ -98,7 +102,9 @@ export function AuditTable({ initial }: { initial: PageResult<AuditEvent> }) {
           className="button button-secondary button-compact"
           type="button"
           onClick={download}
-          disabled={loading || exporting || !result.total || Boolean(error)}
+          disabled={
+            !ready || loading || exporting || !result.total || Boolean(error)
+          }
         >
           <Download size={15} aria-hidden="true" />{" "}
           {exporting ? "내보내는 중" : "검색 결과 내보내기"}
@@ -110,6 +116,7 @@ export function AuditTable({ initial }: { initial: PageResult<AuditEvent> }) {
           <input
             type="date"
             value={from}
+            disabled={!ready}
             max={to || undefined}
             onChange={(event) => {
               setFrom(event.target.value);
@@ -122,6 +129,7 @@ export function AuditTable({ initial }: { initial: PageResult<AuditEvent> }) {
           <input
             type="date"
             value={to}
+            disabled={!ready}
             min={from || undefined}
             onChange={(event) => {
               setTo(event.target.value);
@@ -229,7 +237,7 @@ export function AuditTable({ initial }: { initial: PageResult<AuditEvent> }) {
         page={page}
         pageSize={result.pageSize}
         total={result.total}
-        disabled={loading}
+        disabled={!ready || loading}
         onPageChange={setPage}
       />
       <div className="audit-footer">
